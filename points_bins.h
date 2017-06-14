@@ -1,6 +1,6 @@
-#pragma once
+#include <array>
+#include <vector>
 
-#include <array>	
 #include "bounding_box.h"
 
 template <typename TObjectType>
@@ -28,15 +28,15 @@ public:
 	bool IsObjectFound() const { return mIsObjectFound; }
 
 	double GetDistance2() const { return mDistance2; }
-	void SetDistance2(double TheDistance2) { 
-		mDistance2 = TheDistance2; 
+	void SetDistance2(double TheDistance2) {
+		mDistance2 = TheDistance2;
 		mIsDistanceCalculated = true;
 	}
 	bool IsDistanceCalculated() const { return mIsDistanceCalculated; }
 
 	void Reset() {
 		mpObject = nullptr;
-		mDistance = 0.00;
+		mDistance2 = 0.00;
 		mIsObjectFound = false;
 		mIsDistanceCalculated = false;
 	}
@@ -209,7 +209,7 @@ private:
 		//		number_of_single_point_cells++;
 		//	else
 		//		number_of_multi_point_cells++;
-		//	
+		//
 		//	if (mCellsOffsets[i_cell_offset] > max_cell_occupation)
 		//		max_cell_occupation = mCellsOffsets[i_cell_offset];
 		//}
