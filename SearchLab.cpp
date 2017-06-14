@@ -6,6 +6,10 @@
 #include <string>
 #include <cstdlib>
 
+//Ugly fixes
+#include <assert.h>
+#define KRATOS_ERROR std::cout
+
 //Kratos Independent
 #define KRATOS_INDEPENDENT
 
@@ -134,7 +138,7 @@ void RunTestOMP(char const Title[], IteratorType PBegin, IteratorType PEnd, Iter
 	std::cout << Title << "\t" << t1 - t0 << "\t";
 
 	t0 = GetCurrentTime();
-#pragma omp parallel for
+  #pragma omp parallel for
 	for (std::size_t i = 0; i < numsearch; i++)
 		n = nodes_tree.SearchInRadius(point0, radius0, results0, distances0, MaxResults);
 	t1 = GetCurrentTime();
@@ -213,7 +217,7 @@ int main(int arg, char* argv[])
 		DistanceIterator,
 		PointDistance2<PointType, Dim> >                 dynamic_bins_type;          //DynamicBins;
 
-																					 //typedef Kratos::OctreeBinary<CellType>                                          octree_binary_type;         //OctreeBinary;
+	//typedef Kratos::OctreeBinary<CellType>                                          octree_binary_type;         //OctreeBinary;
 
 	typedef Kratos::Tree< Kratos::KDTreePartition<bucket_type> >                    kdtree_type;                //Kdtree;
 	typedef Kratos::Tree< Kratos::KDTreePartitionAverageSplit<bucket_type> >        kdtree_average_split_type;  //Kdtree;
@@ -224,11 +228,11 @@ int main(int arg, char* argv[])
 	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<dynamic_bins_type> > kdtree_dynamic_bins_type;   //KdtreeBins;
 	typedef Kratos::Tree< Kratos::OCTreePartition<dynamic_bins_type> >              octree_bins_type;           //OctreeBins;
 
-																												//////////////////////////////////////////////////////////////////////////////////////////////////////
-																												// Input data                                                                                       //
-																												//////////////////////////////////////////////////////////////////////////////////////////////////////
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
+	// Input data                                                                                       //
+	//////////////////////////////////////////////////////////////////////////////////////////////////////
 
-																												// set format
+	// set format
 	std::cout.precision(4);
 
 	PointVector points;
@@ -264,9 +268,9 @@ int main(int arg, char* argv[])
 	//Read GiD .post.msh format files NYI
 	//     std::string GiD_Header;
 	//     std::string Token;
-	//     
+	//
 	//     std::getline(input,GiD_Header)  //GiD Header
-	//     std::getline(input,Token)       //CoCoordinates     
+	//     std::getline(input,Token)       //CoCoordinates
 
 	input >> npoints;
 
@@ -347,7 +351,7 @@ int main(int arg, char* argv[])
 	}
 
 
-								   //Prepare the search point, search radius and resut arrays
+	//Prepare the search point, search radius and resut arrays
 	DistanceIterator distances = new double[npoints];
 	PointIterator p_results = new PtrPointType[max_results];
 
@@ -367,7 +371,7 @@ int main(int arg, char* argv[])
 	PointsBins<Point<3>> bins(points_vector.begin(), points_vector.end());
 	double t1 = GetCurrentTime();
 	std::cout << "Points Bin" << "\t" << t1 - t0 << "\t";
-	
+
 	std::vector<PointsBins<Point<3>>::ResultType> results;
 	PointsBins<Point<3>>::ResultType nearest_point_result;
 
