@@ -197,15 +197,7 @@ int main(int arg, char* argv[]) {
 	PointType   point;
 	std::size_t npoints;
 
-	//Read GiD .post.msh format files NYI
-	//     std::string GiD_Header;
-	//     std::string Token;
-	//
-	//     std::getline(input,GiD_Header)  //GiD Header
-	//     std::getline(input,Token)       //CoCoordinates
-
 	input >> npoints;
-
 	points = new PointType*[npoints];
 
 	std::size_t pid;
