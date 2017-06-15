@@ -4,7 +4,7 @@
 #include <cmath>
 
 #include "bounding_box.h"
-#include "result.h"
+#include "spatial_search_result.h"
 
 template <typename TObjectType>
 class PointsBins {
