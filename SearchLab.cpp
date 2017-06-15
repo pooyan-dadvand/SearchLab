@@ -20,8 +20,7 @@
 
 #include "points_bins.h"
 
-double GetCurrentTime()
-{
+double GetCurrentTime() {
 #ifndef _OPENMP
 	return std::clock() / static_cast<double>(CLOCKS_PER_SEC);
 #else
@@ -43,8 +42,7 @@ public:
 };
 
 template< class TreeType, class PointType, class IteratorType, class DistanceIterator>
-void RunTest(char const Title[], IteratorType PBegin, IteratorType PEnd, IteratorType results0, DistanceIterator distances0, std::size_t MaxResults, PointType* allPoints, double radius0, std::size_t numsearch, std::size_t bucket_size)
-{
+void RunTest(char const Title[], IteratorType PBegin, IteratorType PEnd, IteratorType results0, DistanceIterator distances0, std::size_t MaxResults, PointType* allPoints, double radius0, std::size_t numsearch, std::size_t bucket_size) {
 	double t0, t1;
 	std::size_t n;
 
@@ -61,14 +59,16 @@ void RunTest(char const Title[], IteratorType PBegin, IteratorType PEnd, Iterato
 
 	t0 = GetCurrentTime();
   #pragma omp parallel for
-	for (std::size_t i = 0; i < numsearch; i++)
+	for (std::size_t i = 0; i < numsearch; i++) {
 		n = nodes_tree.SearchInRadius(point0, radius0, results0, distances0, MaxResults);
+  }
 	t1 = GetCurrentTime();
 	std::cout << t1 - t0 << "\t";
 
 	t0 = GetCurrentTime();
-	for (std::size_t i = 0; i < numsearch; i++)
+	for (std::size_t i = 0; i < numsearch; i++) {
 		n = nodes_tree.SearchInRadius(point0, radius0, results0, distances0, MaxResults);
+  }
 	t1 = GetCurrentTime();
 	std::cout << t1 - t0 << "\t";
 
@@ -77,8 +77,9 @@ void RunTest(char const Title[], IteratorType PBegin, IteratorType PEnd, Iterato
 	PointType* PNearest = PNearestArray[0];
 
 	t0 = GetCurrentTime();
-	for (std::size_t i = 0; i < 100; i++)
+	for (std::size_t i = 0; i < 100; i++) {
 		nodes_tree.SearchNearestPoint(allPoints, numsearch, PNearestArray, distancesArrayNearest);
+  }
 	t1 = GetCurrentTime();
 
 	std::cout << t1 - t0 << "\t";
@@ -86,8 +87,9 @@ void RunTest(char const Title[], IteratorType PBegin, IteratorType PEnd, Iterato
 
 
 	t0 = GetCurrentTime();
-	for (std::size_t i = 0; i < numsearch_nearest; i++)
+	for (std::size_t i = 0; i < numsearch_nearest; i++) {
 		PNearest = nodes_tree.SearchNearestPoint(point0, distance);
+  }
 	t1 = GetCurrentTime();
 	std::cout << t1 - t0 << "\t";
 
@@ -119,11 +121,7 @@ int main(int arg, char* argv[]) {
 	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<dynamic_bins_type>> kdtree_dynamic_bins_type;   //KdtreeBins;
 	typedef Kratos::Tree< Kratos::OCTreePartition<dynamic_bins_type>>              octree_bins_type;           //OctreeBins;
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Input data                                                                                       //
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	// set format
+	// Input data
 	std::cout.precision(4);
 
 	PointVector points;
@@ -131,24 +129,21 @@ int main(int arg, char* argv[]) {
 
 	double radius = 0.02;
 
-	if (arg == 1)
-	{
+	if (arg == 1) {
 		std::cout << "Argument not founded " << std::endl;
 		return 0;
 	}
 
 	filename = argv[1];
 
-	if (arg == 3)
-	{
+	if (arg == 3) {
 		radius = atof(argv[2]) / 1000000;
 	}
 
 	std::ifstream input;
 	input.open(filename.c_str());
 
-	if (!input)
-	{
+	if (!input) {
 		std::cout << "Cannot open data file" << std::endl;
 		return 0;
 	}
@@ -169,8 +164,7 @@ int main(int arg, char* argv[]) {
 
 	std::size_t pid;
 
-	for (std::size_t i = 0; i < npoints; i++)
-	{
+	for (std::size_t i = 0; i < npoints; i++) {
 		input >> pid;
 		input >> point;
 
@@ -186,26 +180,18 @@ int main(int arg, char* argv[]) {
 	max_point.id = 0;
 	mid_point.id = 0;
 
-	for (std::size_t i = 0; i < npoints; i++)
-	{
-		for (std::size_t j = 0; j < 3; j++)
-		{
-			if (min_point[j] >(*points[i])[j]) min_point[j] = (*points[i])[j];
+	for (std::size_t i = 0; i < npoints; i++) {
+		for (std::size_t j = 0; j < 3; j++) {
+			if (min_point[j] > (*points[i])[j]) min_point[j] = (*points[i])[j];
 			if (max_point[j] < (*points[i])[j]) max_point[j] = (*points[i])[j];
 		}
 	}
 
-	for (std::size_t i = 0; i < Dim; i++)
-	{
+	for (std::size_t i = 0; i < Dim; i++) {
 		mid_point.coord[i] = (max_point[i] + min_point[i]) / 2.00;
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	//  Output data Info                                                                                //
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	// Note: This version of main.cpp has a modified output format so as is easier to parse it.
-
+	// Output data Info
 	PointType*  search_point = &mid_point;
 
 	std::size_t numsearch = 100000;
@@ -223,24 +209,14 @@ int main(int arg, char* argv[]) {
 
 	std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	//  Data Setup                                                                                      //
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	PointType* allPoints;
+	// Data Setup
+	PointType * allPoints;
 	allPoints = new PointType[numsearch];
 
 	std::size_t max_results = 100;// npoints;
-	for (std::size_t i = 0; i < 1; i++)
-	{
+	for (std::size_t i = 0; i < 1; i++) {
 		allPoints[i] = *search_point;
-
-		//radiusArray[i] = radius;
-
-		//resultsArray[i] = new PtrPointType[npoints];
-		//distancesArray[i] = new double[npoints];
 	}
-
 
 	//Prepare the search point, search radius and resut arrays
 	DistanceIterator distances = new double[npoints];
@@ -249,15 +225,11 @@ int main(int arg, char* argv[]) {
 
 	// Point-Based Search Structures
 	std::vector<Point<3>> points_vector;
-	for (std::size_t i = 0; i < npoints; i++)
-	{
+	for (std::size_t i = 0; i < npoints; i++) {
 		points_vector.push_back(*(points[i]));
 	}
 
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	//  Run tests                                                                                       //
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-
+	// Run tests
 	double t0 = GetCurrentTime();
 	PointsBins<Point<3>> bins(points_vector.begin(), points_vector.end());
 	double t1 = GetCurrentTime();
@@ -267,7 +239,7 @@ int main(int arg, char* argv[]) {
 	PointsBins<Point<3>>::ResultType nearest_point_result;
 
 	t0 = GetCurrentTime();
-#pragma omp parallel for firstprivate(results)
+  #pragma omp parallel for firstprivate(results)
 	for (std::size_t i = 0; i < numsearch; i++) {
 		results.clear();
 		bins.SearchInRadius(*search_point, radius, results);
