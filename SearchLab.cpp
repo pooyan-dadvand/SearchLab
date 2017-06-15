@@ -1,4 +1,3 @@
-
 //System includes
 #include <fstream>
 #include <iostream>
@@ -6,14 +5,17 @@
 #include <string>
 #include <cstdlib>
 
-//Ugly fixes
+// Point
+#include "point.h"
+
+// Ugly fixes
 #include <assert.h>
 #define KRATOS_ERROR std::cout
 
-//Kratos Independent
+// Kratos Independent
 #define KRATOS_INDEPENDENT
 
-//Kratos includes
+// Kratos includes
 #include "spatial_containers/spatial_containers.h"
 
 #include "points_bins.h"
@@ -26,69 +28,6 @@ double GetCurrentTime()
 	return  omp_get_wtime();
 #endif
 }
-
-
-double rrandom() {
-	return double(rand()) / RAND_MAX;
-};
-
-template< std::size_t dim_type>
-class Point {
-
-public:
-
-	double       coord[dim_type];
-	std::size_t  id;
-	std::size_t  tag;
-	//int id;
-
-	double& operator[](std::size_t i) { return coord[i]; }
-
-	double const & operator[](std::size_t i) const { return coord[i]; }
-
-	void RandomCoord() {
-		for (std::size_t i = 0; i < dim_type; i++)
-			coord[i] = rrandom();
-	}
-
-	void operator=(Point<dim_type> const& Other) {
-		for (std::size_t i = 0; i < dim_type; i++)
-			coord[i] = Other.coord[i];
-	}
-
-	Point& Coordinates() { return *this; }
-
-	Point const& Coordinates() const { return *this; }
-};
-
-template< std::size_t dim_type >
-std::ostream & operator<<(std::ostream& rOut, Point<dim_type> & rPoint) {
-	rOut << "(" << rPoint.id << ") ";
-	for (std::size_t i = 0; i < dim_type; i++)
-		rOut << rPoint[i] << " ";
-	return rOut;
-};
-
-template< std::size_t dim_type >
-std::istream & operator>>(std::istream& rIn, Point<dim_type> & rPoint) {
-	for (std::size_t i = 0; i < dim_type; i++)
-		rIn >> rPoint[i];
-
-	return rIn;
-};
-
-template< class T, std::size_t dim >
-class PointDistance {
-public:
-	double operator()(T const& p1, T const& p2) {
-		double dist = 0.0;
-		for (std::size_t i = 0; i < dim; i++) {
-			double tmp = p1[i] - p2[i];
-			dist += tmp*tmp;
-		}
-		return sqrt(dist);
-	}
-};
 
 template< class T, std::size_t dim >
 class PointDistance2 {
@@ -103,25 +42,8 @@ public:
 	}
 };
 
-template< std::size_t dim >
-bool LowerPoint(Point<dim> const& reference, Point<dim> const& new_) {
-	for (std::size_t i = 0; i < dim; i++)
-		if (reference[i] < new_[i])
-			return false;
-	return true;
-};
-
-template< std::size_t dim >
-bool UpperPoint(Point<dim> const& reference, Point<dim> const& new_) {
-	for (std::size_t i = 0; i < dim; i++)
-		if (reference[i] > new_[i])
-			return false;
-	return true;
-};
-
-
 template< class TreeType, class PointType, class IteratorType, class DistanceIterator>
-void RunTestOMP(char const Title[], IteratorType PBegin, IteratorType PEnd, IteratorType results0, DistanceIterator distances0, std::size_t MaxResults, PointType* allPoints, double radius0, std::size_t numsearch, std::size_t bucket_size)
+void RunTest(char const Title[], IteratorType PBegin, IteratorType PEnd, IteratorType results0, DistanceIterator distances0, std::size_t MaxResults, PointType* allPoints, double radius0, std::size_t numsearch, std::size_t bucket_size)
 {
 	double t0, t1;
 	std::size_t n;
@@ -133,7 +55,7 @@ void RunTestOMP(char const Title[], IteratorType PBegin, IteratorType PEnd, Iter
 	std::size_t numsearch_nearest = 100 * numsearch;
 
 	t0 = GetCurrentTime();
-	TreeType   nodes_tree(PBegin, PEnd, bucket_size);
+	TreeType nodes_tree(PBegin, PEnd, bucket_size);
 	t1 = GetCurrentTime();
 	std::cout << Title << "\t" << t1 - t0 << "\t";
 
@@ -172,61 +94,30 @@ void RunTestOMP(char const Title[], IteratorType PBegin, IteratorType PEnd, Iter
 	std::cout << n << "\t" << *PNearestArray[0] << std::endl;
 };
 
-int main(int arg, char* argv[])
-{
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
-	//  Defines and initialization                                                                      //
-	//////////////////////////////////////////////////////////////////////////////////////////////////////
+int main(int arg, char* argv[]) {
+	constexpr std::size_t Dim = 3;
 
-	static const std::size_t Dim = 3;
+	typedef Point<Dim>     PointType;
 
-	typedef Point<Dim> PointType;
+	typedef PointType *     PtrPointType;
+	typedef PtrPointType *  PointVector;
+	typedef PtrPointType *  PointIterator;
 
-	typedef PointType*                              PtrPointType;
-	typedef PtrPointType*                           PointVector;
-	typedef PtrPointType*                           PointIterator;
+	typedef double* DistanceVector;
+	typedef double* DistanceIterator;
 
-	typedef double*                                 DistanceVector;
-	typedef double*                                 DistanceIterator;
+	typedef Kratos::Bucket<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>       bucket_type;  //Bucket;
+	typedef Kratos::Bins<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>         static_bins_type;           //StaticBins;
+	typedef Kratos::BinsDynamic<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>  dynamic_bins_type; //DynamicBins;
 
-	//typedef DistanceSpatialContainersConfigure      ConfigType;
-	//typedef Kratos::OctreeBinaryCell<ConfigType>    CellType;
-
-	typedef Kratos::Bucket<         Dim,
-		PointType,
-		PointVector,
-		PtrPointType,
-		PointIterator,
-		DistanceIterator,
-		PointDistance2<PointType, Dim>
-	>                                               bucket_type;                //Bucket;
-
-	typedef Kratos::Bins<           Dim,
-		PointType,
-		PointVector,
-		PtrPointType,
-		PointIterator,
-		DistanceIterator,
-		PointDistance2<PointType, Dim> >                 static_bins_type;           //StaticBins;
-
-	typedef Kratos::BinsDynamic<    Dim,
-		PointType,
-		PointVector,
-		PtrPointType,
-		PointIterator,
-		DistanceIterator,
-		PointDistance2<PointType, Dim> >                 dynamic_bins_type;          //DynamicBins;
-
-	//typedef Kratos::OctreeBinary<CellType>                                          octree_binary_type;         //OctreeBinary;
-
-	typedef Kratos::Tree< Kratos::KDTreePartition<bucket_type> >                    kdtree_type;                //Kdtree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionAverageSplit<bucket_type> >        kdtree_average_split_type;  //Kdtree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<bucket_type> >       kdtree_midpoint_split_type; //Kdtree;
-	typedef Kratos::Tree< Kratos::OCTreePartition<bucket_type> >                    octree_type;                //Octree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<static_bins_type> >  kdtree_static_bins_type;    //KdtreeBins;
-	typedef Kratos::Tree< Kratos::OCTreePartition<static_bins_type> >               octree_static_bins_type;    //OctreeBins;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<dynamic_bins_type> > kdtree_dynamic_bins_type;   //KdtreeBins;
-	typedef Kratos::Tree< Kratos::OCTreePartition<dynamic_bins_type> >              octree_bins_type;           //OctreeBins;
+	typedef Kratos::Tree< Kratos::KDTreePartition<bucket_type>>                    kdtree_type;                //Kdtree;
+	typedef Kratos::Tree< Kratos::KDTreePartitionAverageSplit<bucket_type>>        kdtree_average_split_type;  //Kdtree;
+	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<bucket_type>>       kdtree_midpoint_split_type; //Kdtree;
+	typedef Kratos::Tree< Kratos::OCTreePartition<bucket_type>>                    octree_type;                //Octree;
+	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<static_bins_type>>  kdtree_static_bins_type;    //KdtreeBins;
+	typedef Kratos::Tree< Kratos::OCTreePartition<static_bins_type>>               octree_static_bins_type;    //OctreeBins;
+	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<dynamic_bins_type>> kdtree_dynamic_bins_type;   //KdtreeBins;
+	typedef Kratos::Tree< Kratos::OCTreePartition<dynamic_bins_type>>              octree_bins_type;           //OctreeBins;
 
 	//////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Input data                                                                                       //
@@ -394,6 +285,7 @@ int main(int arg, char* argv[])
 
 	t0 = GetCurrentTime();
 
+  #pragma omp parallel for firstprivate(nearest_point_result)
 	for (std::size_t i = 0; i < numsearch_nearest; i++) {
 		nearest_point_result = bins.SearchNearest(*search_point);
 	}
@@ -408,12 +300,12 @@ int main(int arg, char* argv[])
 	std::cout << t1 - t0 << " \t" << results.size() << "\t" << *nearest_point_result.Get();
 	std::cout << std::endl;
 
-	RunTestOMP<static_bins_type>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
-	RunTestOMP<dynamic_bins_type>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
-	//RunTestOMP<kdtree_type>("KdTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
-	//RunTestOMP<kdtree_average_split_type>("KdTreeAverage", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
-	//RunTestOMP<kdtree_midpoint_split_type>("KdTreeMidpoint", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
-	RunTestOMP<octree_type>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
+	RunTest<static_bins_type>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
+	RunTest<dynamic_bins_type>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
+	//RunTest<kdtree_type>("KdTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
+	//RunTest<kdtree_average_split_type>("KdTreeAverage", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
+	//RunTest<kdtree_midpoint_split_type>("KdTreeMidpoint", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
+	RunTest<octree_type>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
 
 	return 0;
 }
