@@ -13,7 +13,7 @@ public:
 
 	SpatialSearchResult(SpatialSearchResult const& Other) = default;
 
-	//SpatialSearchResult(SpatialSearchResult&& Other) = default;
+	SpatialSearchResult(SpatialSearchResult&& Other) = default;
 
 	TObjectType* const Get() const { return mpObject; }
 	void Set(TObjectType* pObject) {

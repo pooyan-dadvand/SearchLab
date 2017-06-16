@@ -142,7 +142,7 @@ void RunTestsNewInterface(char const Title[], std::vector<Point<3>> & points_vec
   std::cout << std::endl;
 }
 
-int main(int arg, char* argv[]) {
+int RunPointSearchComparison(std::string Filename, double Radius) {
 	constexpr std::size_t Dim = 3;
 
 	typedef Point<Dim>       PointType;
@@ -171,29 +171,15 @@ int main(int arg, char* argv[]) {
 	std::cout << std::setprecision(4) << std::fixed;
 
 	PointVector points;
-	std::string filename;
-
-	double radius = 0.02;
-
-	if (arg == 1) {
-		std::cout << "Argument not founded " << std::endl;
-		return 0;
-	}
-
-	filename = argv[1];
-
-	if (arg == 3) {
-		radius = atof(argv[2]) / 1000000;
-	}
 
 	std::ifstream input;
-	input.open(filename.c_str());
+	input.open(Filename.c_str());
 
 	if (!input) {
 		std::cout << "Cannot open data file" << std::endl;
 		return 0;
 	}
-
+	std::cout << "Comparison for " << Filename << std::endl;
 	PointType   point;
 	std::size_t npoints;
 
@@ -238,7 +224,7 @@ int main(int arg, char* argv[]) {
 	std::cout << " min point : " << min_point << std::endl;
 	std::cout << " max point : " << max_point << std::endl;
 	std::cout << " search_point : " << search_point << std::endl;
-	std::cout << " search radius : " << radius << std::endl;
+	std::cout << " search radius : " << Radius << std::endl;
 	std::cout << std::endl;
 
 	std::cout << " Number of Points : " << npoints << std::endl;
@@ -251,7 +237,7 @@ int main(int arg, char* argv[]) {
 	PointType * allPoints;
 	allPoints = new PointType[numsearch];
 
-	std::size_t max_results = 100;// npoints;
+	std::size_t max_results = npoints;
 	for (std::size_t i = 0; i < 1; i++) {
 		allPoints[i] = search_point;
 	}
@@ -267,16 +253,44 @@ int main(int arg, char* argv[]) {
 	}
 
   // New Interface
-  RunTestsNewInterface<PointsBins<Point<3>>>("PointBins", points_vector, search_point, radius, numsearch, numsearch_nearest);
+  RunTestsNewInterface<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // Old Interface
-	RunTestsOldInterface<StaticBinsType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
-	RunTestsOldInterface<DynamicBinsType>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
-  RunTestsOldInterface<OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
+	RunTestsOldInterface<StaticBinsType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 1);
+	RunTestsOldInterface<DynamicBinsType>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 1);
+  RunTestsOldInterface<OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 10);
 
   //RunTestsOldInterface<kdtree_type>("KdTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
 	//RunTestsOldInterface<kdtree_average_split_type>("KdTreeAverage", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
 	//RunTestsOldInterface<kdtree_midpoint_split_type>("KdTreeMidpoint", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
+
+	return 0;
+}
+
+int main(int arg, char* argv[]) {
+	std::string filename;
+
+	double radius = 0.01;
+
+
+	if (arg > 1) {
+		std::cout << "Argument not founded " << std::endl;
+		filename = argv[1];
+
+		if (arg == 3) {
+			radius = atof(argv[2]) / 1000000;
+		}
+
+
+		return 0;
+	}
+
+	filename = "genericCube100x100x100.5051.pts";
+	RunPointSearchComparison(filename, radius);
+	filename = "offsetCube79x79x79.1603.pts";
+	RunPointSearchComparison(filename, radius);
+	filename = "line100000.5.pts";
+	RunPointSearchComparison(filename, radius);
 
 	return 0;
 }
