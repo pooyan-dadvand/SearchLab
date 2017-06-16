@@ -1,49 +1,10 @@
-#pragma once
+#include <array>
+#include <vector>
+#include <limits>
+#include <cmath>
 
-#include <array>	
 #include "bounding_box.h"
-
-template <typename TObjectType>
-class SpatialSearchResult {
-	TObjectType* mpObject;
-	double mDistance2;
-	bool mIsObjectFound;
-	bool mIsDistanceCalculated;
-public:
-	SpatialSearchResult() : mpObject(nullptr), mDistance2(0.00), mIsObjectFound(false), mIsDistanceCalculated(false) {}
-	SpatialSearchResult(TObjectType* pObject) : mpObject(pObject), mDistance2(0.00), mIsObjectFound(false), mIsDistanceCalculated(false) {
-		if (mpObject != nullptr)
-			mIsObjectFound = true;
-	}
-
-	SpatialSearchResult(SpatialSearchResult const& Other) = default;
-
-	//SpatialSearchResult(SpatialSearchResult&& Other) = default;
-
-	TObjectType* const Get() const { return mpObject; }
-	void Set(TObjectType* pObject) {
-		mpObject = pObject;
-		mIsObjectFound = true;
-	}
-	bool IsObjectFound() const { return mIsObjectFound; }
-
-	double GetDistance2() const { return mDistance2; }
-	void SetDistance2(double TheDistance2) { 
-		mDistance2 = TheDistance2; 
-		mIsDistanceCalculated = true;
-	}
-	bool IsDistanceCalculated() const { return mIsDistanceCalculated; }
-
-	void Reset() {
-		mpObject = nullptr;
-		mDistance = 0.00;
-		mIsObjectFound = false;
-		mIsDistanceCalculated = false;
-	}
-
-	SpatialSearchResult& operator=(SpatialSearchResult const& Other) = default;
-
-};
+#include "spatial_search_result.h"
 
 template <typename TObjectType>
 class PointsBins {
@@ -209,7 +170,7 @@ private:
 		//		number_of_single_point_cells++;
 		//	else
 		//		number_of_multi_point_cells++;
-		//	
+		//
 		//	if (mCellsOffsets[i_cell_offset] > max_cell_occupation)
 		//		max_cell_occupation = mCellsOffsets[i_cell_offset];
 		//}
