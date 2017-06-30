@@ -1,3 +1,5 @@
+#pragma once
+
 #include <array>	
 #include <vector>
 #include <limits>
@@ -5,6 +7,8 @@
 
 #include "bounding_box.h"
 #include "spatial_search_result.h"
+
+
 
 template <typename TObjectType>
 class PointsBins {
