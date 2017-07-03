@@ -139,7 +139,7 @@ void RunTestsNewInterface(char const Title[], std::vector<Point<3>> & points_vec
     nearest_point_result = bins.SearchNearest(search_point);
   }
   t1 = GetCurrentTime();
- /* std::cout << t1 - t0 << "\t" << results.size() << "\t" << *nearest_point_result.Get();*/
+  std::cout << t1 - t0 << "\t" << results.size() << "\t" << *nearest_point_result.Get();
   std::cout << std::endl;
 }
 
@@ -255,7 +255,6 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 
   // New Interface
 	RunTestsNewInterface<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
-	RunTestsNewInterface<PointsHash<Point<3>>>("PointHash", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // Old Interface
 	RunTestsOldInterface<StaticBinsType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 1);

@@ -11,25 +11,23 @@ class ParallelCoherentHash {
 	static constexpr double LoadFactor = 0.9;
 
 public:
+	using KeyType = std::uint64_t;
+
 	ParallelCoherentHash() {
 		FillRandomOffsets();
 	}
 
-	template<typename TIteratorType>
-	ParallelCoherentHash(TIteratorType const& DataBegin, TIteratorType const& DataEnd) {
-		FillRandomOffsets();
-		Insert(DataBegin, DataEnd);
-	}
-
-	template<typename TIteratorType>
-	void Insert(TIteratorType	DataBegin, TIteratorType const& DataEnd) {
-		for (auto i_data = DataBegin; i_data DataEnd; i_data++)
-			Insert(*i_data);
-	}
-
-	void Insert(TDataType& rData) {
-		HashData new_hash_data(GetHash(rData, 0), &rData);
-
+	void Insert(KeyType Key, TDataType& rData) {
+		for (int age = 0; age < MaximumAge; age++) {
+			auto hash_position = GetHash(Key, age);
+			auto& hash_data = mHashTable[hash_position]
+			if (hash_data.IsEmpty()) {
+				hash_data.SetKey(Key);
+				hash_data.SetData(rData);
+				return;
+			}
+		}
+		throw std::exception("Inserting failed for all hash functions");
 	}
 
 	std::size_t Size() {
@@ -40,20 +38,37 @@ public:
 		return static_cast<std::size_t>(mHashTable.size()*LoadFactor);
 	}
 
+	void Reserve(std::size_t NewCapacity) {
+		if (Size() == 0)
+			mHashTable.resize(static_cast<std::size_t>((NewCapacity / LoadFactor) + 1));
+		else
+			throw std::exception("Resizing a non empty hash table is not supported yet");
+	}
+
 private:
 	class HashData {
 		char mMaximumAge;
 		std::uint64_t mKey;
-		TDataType* mpObject;
+		TDataType mData;
+		bool mIsEmpty;
 	public:
-		HashData(std::uint64_t Key, TDataType* pObject) : mMaximumAge(0), mKey(Key), mpObject(pObject) {}
+		HashData() : mMaximumAge(0), mKey(0), mData(), mIsEmpty(true) {}
+		HashData(std::uint64_t Key, TDataType& rData) : mMaximumAge(0), mKey(Key), mData(rData), mIsEmpty(false) {}
 		HashData(HashData const& Other) = default;
 
 		void SetMaximumAge(char MaximumAge) { mMaximumAge = MaximumAge; }
 		char GetMaximumAge() { return mMaximumAge; }
 
+		void SetKey(KeyType Key) { mKey = Key; }
 		std::uint64_t GetKey() { return mKey; }
-		TDataType* GetObject() { return mpObject; }
+
+		void SetData(TDataType& rData) { 
+			mIsEmpty = false;
+			mData = rData; 
+		}
+
+		TDataType& GetData() { return mData; }
+		bool IsEmpty() { return mIsEmpty; }
 	};
 
 	std::size_t mSize;
@@ -70,6 +85,5 @@ private:
 	std::uint64_t GetHash(TDataType& rObject, char Age) {
 		return CalculateCellIndex(rObject) + mHashOffsets[Age];
 	}
-
 
 };
