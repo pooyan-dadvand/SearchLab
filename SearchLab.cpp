@@ -20,6 +20,7 @@
 #include "spatial_containers/spatial_containers.h"
 
 #include "points_bins.h"
+#include "points_hash.h"
 
 double GetCurrentTime() {
 #ifndef _OPENMP
@@ -51,7 +52,7 @@ void RunTestsOldInterface(char const Title[], IteratorType PBegin, IteratorType 
 	std::vector<std::size_t> numresArray(numsearch);
 	PointType& point0 = allPoints[0];
 
-	std::size_t numsearch_nearest = 100 * numsearch;
+	std::size_t numsearch_nearest = 10 * numsearch;
 
 	t0 = GetCurrentTime();
 	SearchStructureType nodes_tree(PBegin, PEnd);
@@ -78,7 +79,7 @@ void RunTestsOldInterface(char const Title[], IteratorType PBegin, IteratorType 
 	PointType* PNearest = PNearestArray[0];
 
 	t0 = GetCurrentTime();
-	for (std::size_t i = 0; i < 100; i++) {
+	for (std::size_t i = 0; i < 10; i++) {
 		nodes_tree.SearchNearestPoint(allPoints, numsearch, PNearestArray, distancesArrayNearest);
   }
 	t1 = GetCurrentTime();
@@ -219,7 +220,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	PointType & search_point = mid_point;
 
 	std::size_t numsearch = 100000;
-	std::size_t numsearch_nearest = numsearch * 100;
+	std::size_t numsearch_nearest = numsearch * 10;
 
 	std::cout << " min point : " << min_point << std::endl;
 	std::cout << " max point : " << max_point << std::endl;
@@ -253,7 +254,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	}
 
   // New Interface
-  RunTestsNewInterface<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
+	RunTestsNewInterface<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // Old Interface
 	RunTestsOldInterface<StaticBinsType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 1);
@@ -288,6 +289,8 @@ int main(int arg, char* argv[]) {
 	filename = "genericCube100x100x100.5051.pts";
 	RunPointSearchComparison(filename, radius);
 	filename = "offsetCube79x79x79.1603.pts";
+	RunPointSearchComparison(filename, radius);
+	filename = "clusterCube6x6x6X4913.490.pts";
 	RunPointSearchComparison(filename, radius);
 	filename = "line100000.5.pts";
 	RunPointSearchComparison(filename, radius);

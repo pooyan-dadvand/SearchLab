@@ -1,3 +1,5 @@
+#pragma once
+
 template <typename TObjectType>
 class SpatialSearchResult {
 	TObjectType* mpObject;
