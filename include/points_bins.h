@@ -47,8 +47,11 @@ public:
 		for (std::size_t i_z = 0; i_z < length[2]; i_z++) {
 			auto y_position = min_cell + i_z * mCells.GetNumberOfCells(0) *mCells.GetNumberOfCells(1);
 			for (std::size_t i_y = 0; i_y < length[1]; i_y++) {
-				for (std::size_t offset = mCells.GetCellBeginIndex(y_position); offset <mCells.GetCellBeginIndex(y_position + length[0]); offset++) {
-					TObjectType* p_point = mpPoints[offset];
+				std::size_t offset = mCells.GetCellBeginIndex(y_position);
+				std::size_t end_offset = mCells.GetCellBeginIndex(y_position + length[0]);
+				TObjectType* p_point = mpPoints[mCells.GetCellBeginIndex(y_position)];
+				for (; offset <end_offset; offset++) {
+					p_point++;
 					if (Distance2(*p_point, ThePoint) <= radius2) {
 						rResults.push_back(ResultType(p_point));
 					}
