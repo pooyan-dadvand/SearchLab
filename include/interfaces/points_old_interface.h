@@ -2,11 +2,14 @@
 #include <vector>
 
 #include "timer.h"
+#include "point.h"
 
 #include "spatial_containers/spatial_containers.h"
 
+namespace PointsOld {
+
 template<class SearchStructureType, class PointType, class IteratorType, class DistanceIterator>
-void RunTestsOldInterface(char const Title[], IteratorType PBegin, IteratorType PEnd, IteratorType results0, DistanceIterator distances0, std::size_t MaxResults, PointType* allPoints, double radius0, std::size_t numsearch, std::size_t bucket_size) {
+void RunTests(char const Title[], IteratorType PBegin, IteratorType PEnd, IteratorType results0, DistanceIterator distances0, std::size_t MaxResults, PointType* allPoints, double radius0, std::size_t numsearch, std::size_t bucket_size) {
 	double t0, t1;
 	std::size_t n;
 
@@ -59,3 +62,5 @@ void RunTestsOldInterface(char const Title[], IteratorType PBegin, IteratorType 
 
 	std::cout << n << "\t" << *PNearestArray[0] << std::endl;
 };
+
+}

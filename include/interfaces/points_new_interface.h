@@ -6,8 +6,10 @@
 
 #include "points_bins.h"
 
+namespace PointsNew {
+
 template<class BinsType>
-void RunTestsNewInterface(char const Title[], std::vector<Point<3>> & points_vector, const Point<3> & search_point, double radius, std::size_t numsearch, std::size_t numsearch_nearest) {
+void RunTests(char const Title[], std::vector<Point<3>> & points_vector, const Point<3> & search_point, double radius, std::size_t numsearch, std::size_t numsearch_nearest) {
   double t0 = GetCurrentTime();
   BinsType bins(points_vector.begin(), points_vector.end());
   double t1 = GetCurrentTime();
@@ -49,4 +51,6 @@ void RunTestsNewInterface(char const Title[], std::vector<Point<3>> & points_vec
   t1 = GetCurrentTime();
   std::cout << t1 - t0 << "\t" << results.size() << "\t" << *nearest_point_result.Get();
   std::cout << std::endl;
+}
+
 }
