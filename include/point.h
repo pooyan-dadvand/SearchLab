@@ -1,8 +1,6 @@
-#include <iostream>
+#pragma once
 
-double rrandom() {
-	return double(std::rand()) / RAND_MAX;
-};
+#include <iostream>
 
 template< std::size_t dim_type>
 class Point {
@@ -14,14 +12,16 @@ public:
 	std::size_t  tag;
 	//int id;
 
+  Point() {}
+  Point(double x, double y, double z) {
+    coord[0] = x;
+    coord[1] = y;
+    coord[2] = z;
+  }
+
 	double& operator[](std::size_t i) { return coord[i]; }
 
 	double const & operator[](std::size_t i) const { return coord[i]; }
-
-	void RandomCoord() {
-		for (std::size_t i = 0; i < dim_type; i++)
-			coord[i] = rrandom();
-	}
 
 	void operator=(Point<dim_type> const& Other) {
 		for (std::size_t i = 0; i < dim_type; i++)

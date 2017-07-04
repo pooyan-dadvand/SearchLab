@@ -17,12 +17,15 @@ public:
 	template<typename TIteratorType>
 	PointsBins(TIteratorType const& PointsBegin, TIteratorType const& PointsEnd) : mBoundingBox(PointsBegin, PointsEnd) {
 		mNumberOfPoints = std::distance(PointsBegin, PointsEnd);
+
 		if (mNumberOfPoints == 0) {
 			mNumberOfCells = { 1,1,1 };
 			mpPoints = nullptr;
 			return;
 		}
+
 		CalculateCellSize();
+
 		mpPoints = new PointerType[mNumberOfPoints];
 		for (std::size_t i = 0; i < mNumberOfPoints; i++)
 			mpPoints[i] = nullptr;
@@ -159,26 +162,6 @@ private:
 		for (auto i_point = PointsBegin; i_point != PointsEnd; i_point++) {
 			mCellsOffsets[CalculateCellIndex(*i_point)+1]++;
 		}
-		//double number_of_empty_cells = 0;
-		//double number_of_single_point_cells = 0;
-		//double number_of_multi_point_cells = 0;
-		//std::size_t max_cell_occupation = 0;
-		//for (std::size_t i_cell_offset = 1; i_cell_offset < mCellsOffsets.size(); i_cell_offset++) {
-		//	if (mCellsOffsets[i_cell_offset] == 0)
-		//		number_of_empty_cells++;
-		//	else if (mCellsOffsets[i_cell_offset] == 1)
-		//		number_of_single_point_cells++;
-		//	else
-		//		number_of_multi_point_cells++;
-		//
-		//	if (mCellsOffsets[i_cell_offset] > max_cell_occupation)
-		//		max_cell_occupation = mCellsOffsets[i_cell_offset];
-		//}
-
-		//std::cout << mCellsOffsets.size() << " cells with " << 100.00* number_of_empty_cells / mCellsOffsets.size() << " empty cells ";
-		//std::cout << 100.00* number_of_single_point_cells / mCellsOffsets.size() << " single object cells ";
-		//std::cout << 100.00* number_of_multi_point_cells / mCellsOffsets.size() << " multi object cells ";
-		//std::cout << "(max occupation = " << max_cell_occupation << ")";
 
 		for (std::size_t i_cell_offset = 1; i_cell_offset < mCellsOffsets.size(); i_cell_offset++) {
 			mCellsOffsets[i_cell_offset] += mCellsOffsets[i_cell_offset - 1];
