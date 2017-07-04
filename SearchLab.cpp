@@ -32,31 +32,30 @@ public:
 	}
 };
 
-typedef Point<3> *       PtrPointType;
-typedef PtrPointType *   PointVector;
-typedef PtrPointType *   PointIterator;
+typedef Point<3> *        PtrPointType;
+typedef PtrPointType *    PointVector;
+typedef PtrPointType *    PointIterator;
+
+typedef SphereObject<3> * PtrObjectType;
+typedef PtrObjectType *   ObjectVector;
+typedef PtrObjectType *   ObjectIterator;
+
+typedef double* DistanceVector;
+typedef double* DistanceIterator;
+
+typedef Kratos::Bucket<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>       BucketType;  //Bucket;
+typedef Kratos::Bins<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>         BinsStaticType;           //StaticBins;
+typedef Kratos::BinsDynamic<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>  BinsDynamicType; //DynamicBins;
 
 int main(int arg, char* argv[]) {
-	typedef double* DistanceVector;
-	typedef double* DistanceIterator;
-
-	typedef Kratos::Bucket<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>       BucketType;  //Bucket;
-	typedef Kratos::Bins<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>         BinsStaticType;           //StaticBins;
-	typedef Kratos::BinsDynamic<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>  BinsDynamicType; //DynamicBins;
-
-	typedef Kratos::Tree< Kratos::KDTreePartition<BucketType>>                   kdtree_type;                //Kdtree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionAverageSplit<BucketType>>       kdtree_average_split_type;  //Kdtree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<BucketType>>      kdtree_midpoint_split_type; //Kdtree;
-	typedef Kratos::Tree< Kratos::OCTreePartition<BucketType>>                   OctreeType;                 //Octree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<BinsStaticType>>  kdtree_BinsStaticType;      //KdtreeBins;
-	typedef Kratos::Tree< Kratos::OCTreePartition<BinsStaticType>>               octree_BinsStaticType;      //OctreeBins;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<BinsDynamicType>> kdtree_BinsDynamicType;     //KdtreeBins;
-	typedef Kratos::Tree< Kratos::OCTreePartition<BinsDynamicType>>              octree_bins_type;           //OctreeBins;
 
 	// Input data
 	std::cout << std::setprecision(4) << std::fixed;
 
-	PointVector points;
+  //
+	Point<3> ** points;
+  SphereObject<3> ** objects;
+
 	std::string filename;
 
 	double radius = 0.02;
@@ -80,11 +79,15 @@ int main(int arg, char* argv[]) {
 		return 1;
 	}
 
-	Point<3>   point;
+	Point<3> point;
+  SphereObject<3> object;
+
 	std::size_t npoints;
 
 	input >> npoints;
+
 	points = new Point<3>*[npoints];
+  objects = new SphereObject<3>*[npoints];
 
 	std::size_t pid;
 
@@ -134,10 +137,8 @@ int main(int arg, char* argv[]) {
 	std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
 
 	// Data Setup
-	Point<3> * allPoints;
-
-	allPoints = new Point<3>[numsearch];
-  allSpheres = new ShpereObject<3>[numsearch];
+	Point<3> * allPoints = new Point<3>[numsearch];
+  SphereObject<3> * allSpheres = new SphereObject<3>[numsearch];
 
 	std::size_t max_results = 100;// npoints;
 	for (std::size_t i = 0; i < 1; i++) {
@@ -147,6 +148,7 @@ int main(int arg, char* argv[]) {
 	//Prepare the search point, search radius and resut arrays
 	DistanceIterator distances = new double[npoints];
 	PointIterator p_results = new PtrPointType[max_results];
+  ObjectIterator o_results = new PtrObjectType[max_results];
 
 	// Point-Based Search Structures
 	std::vector<Point<3>> points_vector;
@@ -156,19 +158,19 @@ int main(int arg, char* argv[]) {
 
   // Point Interfaces
   // - New Interface
-  RunTestsNewInterface<PointsBins<Point<3>>>("PointBins", points_vector, search_point, radius, numsearch, numsearch_nearest);
+  PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, radius, numsearch, numsearch_nearest);
 
   // - Old Interface
-	RunTestsOldInterface<BinsStaticType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
-	RunTestsOldInterface<BinsDynamicType>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
-  RunTestsOldInterface<OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
+	PointsOld::RunTests<BinsStaticType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
+	PointsOld::RunTests<BinsDynamicType>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
+  PointsOld::RunTests<OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
 
   // Object Interfaces
   // - New Interface
   // TO BE FILLED
 
   // - Old Interface
-  // RunTestsOldInterface<BinsObjectStaticType>
+  ObjectsOld::RunTests<BinsObjectStaticType>("BinsObjectStatic", objects, objects + npoints, o_results, distances, max_results, allPoints, radius, numsearch, 1);
   // RunTestsOldInterface<BinsObjectDynamicType>
 
 	return 0;
