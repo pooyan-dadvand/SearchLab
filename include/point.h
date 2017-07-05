@@ -28,6 +28,24 @@ public:
 			coord[i] = Other.coord[i];
 	}
 
+  Point<dim_type> operator+ (const Point<dim_type>& t) const
+  {
+    Point<dim_type> ret(*this);
+    ret[0] += t[0];
+    ret[1] += t[1];
+    ret[2] += t[2];
+    return ret;
+  }
+
+  Point<dim_type> operator- (const Point<dim_type>& t) const
+  {
+    Point<dim_type> ret(*this);
+    ret[0] -= t[0];
+    ret[1] -= t[1];
+    ret[2] -= t[2];
+    return ret;
+  }
+
 	Point& Coordinates() { return *this; }
 
 	Point const& Coordinates() const { return *this; }
