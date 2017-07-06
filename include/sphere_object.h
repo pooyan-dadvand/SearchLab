@@ -20,6 +20,7 @@ public:
 	void operator=(SphereObject<dim_type> const& Other) {
 		for (std::size_t i = 0; i < dim_type; i++)
 			coord[i] = Other.coord[i];
+    radius = Other.radius;
 	}
 
 	SphereObject& Coordinates() { return *this; }
