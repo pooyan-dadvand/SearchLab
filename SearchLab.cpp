@@ -148,12 +148,12 @@ int main(int arg, char* argv[]) {
 
   // Point Interfaces
   // - New Interface
-  // PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, radius, numsearch, numsearch_nearest);
+  PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, radius, numsearch, numsearch_nearest);
 
   // - Old Interface
-	// PointsOld::RunTests<Containers::BinsStaticType>("StaticBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
-	// PointsOld::RunTests<Containers::BinsDynamicType>("DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
-  // PointsOld::RunTests<Containers::OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
+	PointsOld::RunTests<Containers::BinsStaticType>("StaticBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
+	PointsOld::RunTests<Containers::BinsDynamicType>("DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
+  //PointsOld::RunTests<Containers::OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
 
   // Object Interfaces
   // - New Interface
