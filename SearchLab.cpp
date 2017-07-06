@@ -12,40 +12,13 @@
 // Kratos Independent
 #define KRATOS_INDEPENDENT
 
+// Containers
+#include "containers.h"
+
 // Interfaces
 #include "interfaces/points_old_interface.h"
 #include "interfaces/points_new_interface.h"
 #include "interfaces/objects_old_interface.h"
-
-constexpr std::size_t Dim = 3;
-
-template< class T, std::size_t dim >
-class PointDistance2 {
-public:
-	double operator()(T const& p1, T const& p2) {
-		double dist = 0.0;
-		for (std::size_t i = 0; i < dim; i++) {
-			double tmp = p1[i] - p2[i];
-			dist += tmp*tmp;
-		}
-		return dist;
-	}
-};
-
-typedef Point<3> *        PtrPointType;
-typedef PtrPointType *    PointVector;
-typedef PtrPointType *    PointIterator;
-
-typedef SphereObject<3> * PtrObjectType;
-typedef PtrObjectType *   ObjectVector;
-typedef PtrObjectType *   ObjectIterator;
-
-typedef double* DistanceVector;
-typedef double* DistanceIterator;
-
-typedef Kratos::Bucket<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>       BucketType;  //Bucket;
-typedef Kratos::Bins<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>         BinsStaticType;           //StaticBins;
-typedef Kratos::BinsDynamic<Dim, Point<3>, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<Point<3>, Dim>>  BinsDynamicType; //DynamicBins;
 
 int main(int arg, char* argv[]) {
 
@@ -54,7 +27,6 @@ int main(int arg, char* argv[]) {
 
   //
 	Point<3> ** points;
-  SphereObject<3> ** objects;
 
 	std::string filename;
 
@@ -87,21 +59,31 @@ int main(int arg, char* argv[]) {
 	input >> npoints;
 
 	points = new Point<3>*[npoints];
-  objects = new SphereObject<3>*[npoints];
+  std::vector<Entities::PtrObjectType> objects(npoints);
 
 	std::size_t pid;
 
-	for (std::size_t i = 0; i < npoints; i++) {
+	for(std::size_t i = 0; i < npoints; i++) {
 		input >> pid;
 		input >> point;
 
+    for(std::size_t d = 0; d < 3; d++) {
+      object[d] = point[d];
+    }
+    object.radius = 1.0/npoints;
+
 		points[i] = new Point<3>(point);
 		points[i]->id = pid;
+
+    objects[i] = new SphereObject<3>(object);
+    objects[i]->id = pid;
+    objects[i]->radius = 1.0/npoints;
 	}
 
 	Point<3> min_point(*points[0]);
 	Point<3> max_point(*points[0]);
 	Point<3> mid_point;
+  SphereObject<3> mid_object;
 
 	min_point.id = 0;
 	max_point.id = 0;
@@ -116,10 +98,14 @@ int main(int arg, char* argv[]) {
 
 	for (std::size_t i = 0; i < Dim; i++) {
 		mid_point.coord[i] = (max_point[i] + min_point[i]) / 2.00;
+    mid_object.coord[i] = (max_point[i] + min_point[i]) / 2.00;
 	}
+
+  mid_object.radius = 1.0/npoints;
 
 	// Output data Info
 	Point<3> & search_point = mid_point;
+  SphereObject<3> & search_object = mid_object;
 
 	std::size_t numsearch = 100000;
 	std::size_t numsearch_nearest = numsearch * 100;
@@ -143,12 +129,16 @@ int main(int arg, char* argv[]) {
 	std::size_t max_results = 100;// npoints;
 	for (std::size_t i = 0; i < 1; i++) {
 		allPoints[i] = search_point;
+    allSpheres[i] = search_object;
 	}
 
 	//Prepare the search point, search radius and resut arrays
-	DistanceIterator distances = new double[npoints];
-	PointIterator p_results = new PtrPointType[max_results];
-  ObjectIterator o_results = new PtrObjectType[max_results];
+
+  std::vector<Entities::PtrObjectType> objectResults(max_results);
+  std::vector<double> resultDistances(max_results);
+
+	double * distances = new double[npoints];
+	Entities::PointIterator p_results = new Entities::PtrPointType[max_results];
 
 	// Point-Based Search Structures
 	std::vector<Point<3>> points_vector;
@@ -158,19 +148,19 @@ int main(int arg, char* argv[]) {
 
   // Point Interfaces
   // - New Interface
-  PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, radius, numsearch, numsearch_nearest);
+  // PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, radius, numsearch, numsearch_nearest);
 
   // - Old Interface
-	PointsOld::RunTests<BinsStaticType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
-	PointsOld::RunTests<BinsDynamicType>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 1);
-  PointsOld::RunTests<OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
+	// PointsOld::RunTests<Containers::BinsStaticType>("StaticBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
+	// PointsOld::RunTests<Containers::BinsDynamicType>("DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
+  // PointsOld::RunTests<Containers::OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
 
   // Object Interfaces
   // - New Interface
   // TO BE FILLED
 
   // - Old Interface
-  ObjectsOld::RunTests<BinsObjectStaticType>("BinsObjectStatic", objects, objects + npoints, o_results, distances, max_results, allPoints, radius, numsearch, 1);
+  ObjectsOld::RunTests<Containers::BinsObjectDynamicType>("BinsObjectStatic", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, 1, numsearch, 1);
   // RunTestsOldInterface<BinsObjectDynamicType>
 
 	return 0;
