@@ -70,14 +70,14 @@ int main(int arg, char* argv[]) {
     for(std::size_t d = 0; d < 3; d++) {
       object[d] = point[d];
     }
-    object.radius = 1.0/npoints;
+    object.radius = 0.5/npoints;
 
 		points[i] = new Point<3>(point);
 		points[i]->id = pid;
 
     objects[i] = new SphereObject<3>(object);
     objects[i]->id = pid;
-    objects[i]->radius = 1.0/npoints;
+    objects[i]->radius = 0.5/npoints;
 	}
 
 	Point<3> min_point(*points[0]);
@@ -101,7 +101,7 @@ int main(int arg, char* argv[]) {
     mid_object.coord[i] = (max_point[i] + min_point[i]) / 2.00;
 	}
 
-  mid_object.radius = 1.0/npoints;
+  mid_object.radius = 0.5/npoints;
 
 	// Output data Info
 	Point<3> & search_point = mid_point;
@@ -153,14 +153,15 @@ int main(int arg, char* argv[]) {
   // - Old Interface
 	PointsOld::RunTests<Containers::BinsStaticType>("StaticBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
 	PointsOld::RunTests<Containers::BinsDynamicType>("DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
-  //PointsOld::RunTests<Containers::OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
+  // PointsOld::RunTests<Containers::OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
 
   // Object Interfaces
   // - New Interface
   // TO BE FILLED
 
   // - Old Interface
-  ObjectsOld::RunTests<Containers::BinsObjectDynamicType>("BinsObjectStatic", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, 1, numsearch, 1);
+  ObjectsOld::RunTests<Containers::BinsObjectStaticType>("StaticObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, radius, numsearch, 1);
+  ObjectsOld::RunTests<Containers::BinsObjectDynamicType>("DynamicObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, radius, numsearch, 1);
   // RunTestsOldInterface<BinsObjectDynamicType>
 
 	return 0;
