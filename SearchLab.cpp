@@ -173,12 +173,12 @@ int main(int arg, char* argv[]) {
 
 	filename = "cases/genericCube100x100x100.5051.pts";
 	RunPointSearchComparison(filename, radius);
-	// filename = "cases/offsetCube79x79x79.1603.pts";
-	// RunPointSearchComparison(filename, radius);
-	// filename = "cases/clusterCube6x6x6X4913.490.pts";
-	// RunPointSearchComparison(filename, radius);
-	// filename = "cases/line100000.5.pts";
-	// RunPointSearchComparison(filename, radius);
+	filename = "cases/offsetCube79x79x79.1603.pts";
+	RunPointSearchComparison(filename, radius);
+	filename = "cases/clusterCube6x6x6X4913.490.pts";
+	RunPointSearchComparison(filename, radius);
+	filename = "cases/line100000.5.pts";
+	RunPointSearchComparison(filename, radius);
 
 	return 0;
 }
