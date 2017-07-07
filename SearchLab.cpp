@@ -25,7 +25,9 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	// Input data
 	std::cout << std::setprecision(4) << std::fixed;
 
-	PointVector points;
+	Point<3> ** points;
+  Point<3> point;
+  SphereObject<3> object;
 
 	std::ifstream input;
 	input.open(Filename.c_str());
@@ -34,9 +36,6 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 		std::cout << "Cannot open data file" << std::endl;
 		return 1;
 	}
-
-	Point<3> point;
-  SphereObject<3> object;
 
 	std::cout << "Comparison for " << Filename << std::endl;
 
@@ -134,20 +133,21 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 
   // Point Interfaces
   // - New Interface
-  PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, radius, numsearch, numsearch_nearest);
+  PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // - Old Interface
-	PointsOld::RunTests<Containers::BinsStaticType>("StaticBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
-	PointsOld::RunTests<Containers::BinsDynamicType>("DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, radius, numsearch, 1);
-  // PointsOld::RunTests<Containers::OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
+	PointsOld::RunTests<Containers::BinsStaticType>("StaticBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 1);
+	PointsOld::RunTests<Containers::BinsDynamicType>("DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 1);
+  // PointsOld::RunTests<Containers::BinsStaticOctreeType>("OcTreeStatic\t", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 10);
+  // PointsOld::RunTests<Containers::BinsDynamicOctreeType>("OcTreeDynamic\t", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 10);
 
   // Object Interfaces
   // - New Interface
   // TO BE FILLED
 
   // - Old Interface
-  ObjectsOld::RunTests<Containers::BinsObjectStaticType>("StaticObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, radius, numsearch, 1);
-  ObjectsOld::RunTests<Containers::BinsObjectDynamicType>("DynamicObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, radius, numsearch, 1);
+  ObjectsOld::RunTests<Containers::BinsObjectStaticType>("StaticObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1);
+  ObjectsOld::RunTests<Containers::BinsObjectDynamicType>("DynamicObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1);
   // RunTestsOldInterface<BinsObjectDynamicType>
 
 	return 0;
@@ -171,13 +171,13 @@ int main(int arg, char* argv[]) {
 		return 0;
 	}
 
-	filename = "genericCube100x100x100.5051.pts";
+	filename = "cases/genericCube100x100x100.5051.pts";
 	RunPointSearchComparison(filename, radius);
-	filename = "offsetCube79x79x79.1603.pts";
+	filename = "cases/offsetCube79x79x79.1603.pts";
 	RunPointSearchComparison(filename, radius);
-	filename = "clusterCube6x6x6X4913.490.pts";
+	filename = "cases/clusterCube6x6x6X4913.490.pts";
 	RunPointSearchComparison(filename, radius);
-	filename = "line100000.5.pts";
+	filename = "cases/line100000.5.pts";
 	RunPointSearchComparison(filename, radius);
 
 	return 0;
