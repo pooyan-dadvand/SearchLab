@@ -20,31 +20,15 @@
 #include "interfaces/points_new_interface.h"
 #include "interfaces/objects_old_interface.h"
 
-int main(int arg, char* argv[]) {
+int RunPointSearchComparison(std::string Filename, double Radius) {
 
 	// Input data
 	std::cout << std::setprecision(4) << std::fixed;
 
-  //
-	Point<3> ** points;
-
-	std::string filename;
-
-	double radius = 0.02;
-
-	if (arg == 1) {
-		std::cout << "Argument not found" << std::endl;
-		return 1;
-	}
-
-	filename = argv[1];
-
-	if (arg == 3) {
-		radius = atof(argv[2]) / 1000000;
-	}
+	PointVector points;
 
 	std::ifstream input;
-	input.open(filename.c_str());
+	input.open(Filename.c_str());
 
 	if (!input) {
 		std::cout << "Cannot open data file" << std::endl;
@@ -53,6 +37,8 @@ int main(int arg, char* argv[]) {
 
 	Point<3> point;
   SphereObject<3> object;
+
+	std::cout << "Comparison for " << Filename << std::endl;
 
 	std::size_t npoints;
 
@@ -108,12 +94,12 @@ int main(int arg, char* argv[]) {
   SphereObject<3> & search_object = mid_object;
 
 	std::size_t numsearch = 100000;
-	std::size_t numsearch_nearest = numsearch * 100;
+	std::size_t numsearch_nearest = numsearch * 10;
 
 	std::cout << " min point : " << min_point << std::endl;
 	std::cout << " max point : " << max_point << std::endl;
 	std::cout << " search_point : " << search_point << std::endl;
-	std::cout << " search radius : " << radius << std::endl;
+	std::cout << " search radius : " << Radius << std::endl;
 	std::cout << std::endl;
 
 	std::cout << " Number of Points : " << npoints << std::endl;
@@ -126,7 +112,7 @@ int main(int arg, char* argv[]) {
 	Point<3> * allPoints = new Point<3>[numsearch];
   SphereObject<3> * allSpheres = new SphereObject<3>[numsearch];
 
-	std::size_t max_results = 100;// npoints;
+	std::size_t max_results = npoints;
 	for (std::size_t i = 0; i < 1; i++) {
 		allPoints[i] = search_point;
     allSpheres[i] = search_object;
@@ -163,6 +149,36 @@ int main(int arg, char* argv[]) {
   ObjectsOld::RunTests<Containers::BinsObjectStaticType>("StaticObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, radius, numsearch, 1);
   ObjectsOld::RunTests<Containers::BinsObjectDynamicType>("DynamicObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, radius, numsearch, 1);
   // RunTestsOldInterface<BinsObjectDynamicType>
+
+	return 0;
+}
+
+int main(int arg, char* argv[]) {
+	std::string filename;
+
+	double radius = 0.01;
+
+
+	if (arg > 1) {
+		std::cout << "Argument not founded " << std::endl;
+		filename = argv[1];
+
+		if (arg == 3) {
+			radius = atof(argv[2]) / 1000000;
+		}
+
+
+		return 0;
+	}
+
+	filename = "genericCube100x100x100.5051.pts";
+	RunPointSearchComparison(filename, radius);
+	filename = "offsetCube79x79x79.1603.pts";
+	RunPointSearchComparison(filename, radius);
+	filename = "clusterCube6x6x6X4913.490.pts";
+	RunPointSearchComparison(filename, radius);
+	filename = "line100000.5.pts";
+	RunPointSearchComparison(filename, radius);
 
 	return 0;
 }
