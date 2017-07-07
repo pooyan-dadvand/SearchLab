@@ -81,6 +81,11 @@ namespace Containers {
       Dim >
   > BinsDynamicType;
 
+  // Static Objects Bins
+  typedef Kratos::BinsObjectStatic<
+    SphereObjectConfigure
+  > BinsObjectStaticType;
+
   // Dynamic Objects Bins
   typedef Kratos::BinsObjectDynamic<
     SphereObjectConfigure
