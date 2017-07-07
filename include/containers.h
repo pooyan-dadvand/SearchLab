@@ -81,6 +81,11 @@ namespace Containers {
       Dim >
   > BinsDynamicType;
 
+  // Octree
+  typedef Kratos::Tree<
+    Kratos::OCTreePartition<BucketType>
+  > OctreeType;
+
   // Octree Bins (Static);
   typedef Kratos::Tree<
     Kratos::OCTreePartition<BinsStaticType>
