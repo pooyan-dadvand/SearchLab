@@ -26,17 +26,28 @@ static void RunTests(char const Title[], IteratorType PBegin, IteratorType PEnd,
 	t1 = GetCurrentTime();
 	std::cout << Title << "\t" << t1 - t0 << "\t";
 
+  std::vector<std::vector<Entities::PtrObjectType>> objectResultsTmp;
+  #pragma omp parallel
+  {
+    #pragma omp single
+    {
+      objectResultsTmp = std::vector<std::vector<Entities::PtrObjectType>>(omp_get_num_threads(), std::vector<Entities::PtrObjectType>(npoints));
+    }
+  }
+
 	t0 = GetCurrentTime();
 	#pragma omp parallel for
-	for (std::size_t i = 0; i < 1; i++) {
-		n = nodes_tree.SearchObjectsInRadius(objectToSearch, radius0, results0, MaxResults);
+	for (std::size_t i = 0; i < numsearch; i++) {
+    std::vector<Entities::PtrObjectType>::iterator resultsOmp = objectResultsTmp[omp_get_thread_num()].begin();
+		n = nodes_tree.SearchObjectsInRadius(objectToSearch, radius0, resultsOmp, MaxResults);
   }
 	t1 = GetCurrentTime();
 	std::cout << t1 - t0 << "\t";
 
 	t0 = GetCurrentTime();
-	for (std::size_t i = 0; i < 1; i++) {
-		n = nodes_tree.SearchObjectsInRadius(objectToSearch, radius0, results0, distances0, MaxResults);
+	for (std::size_t i = 0; i < numsearch; i++) {
+    IteratorType resultsTmp = results0;
+		n = nodes_tree.SearchObjectsInRadius(objectToSearch, radius0, resultsTmp, distances0, MaxResults);
   }
 	t1 = GetCurrentTime();
 	std::cout << t1 - t0 << "\t";
