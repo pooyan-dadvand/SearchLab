@@ -138,7 +138,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
   // - Old Interface
 	PointsOld::RunTests<Containers::BinsStaticType>("StaticBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 1);
 	PointsOld::RunTests<Containers::BinsDynamicType>("DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 1);
-  // PointsOld::RunTests<Containers::BinsStaticOctreeType>("OcTreeStatic\t", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 10);
+  PointsOld::RunTests<Containers::BinsStaticOctreeType>("OcTreeStatic\t", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 10);
   // PointsOld::RunTests<Containers::BinsDynamicOctreeType>("OcTreeDynamic\t", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 10);
 
   // Object Interfaces
@@ -173,12 +173,12 @@ int main(int arg, char* argv[]) {
 
 	filename = "cases/genericCube100x100x100.5051.pts";
 	RunPointSearchComparison(filename, radius);
-	filename = "cases/offsetCube79x79x79.1603.pts";
-	RunPointSearchComparison(filename, radius);
-	filename = "cases/clusterCube6x6x6X4913.490.pts";
-	RunPointSearchComparison(filename, radius);
-	filename = "cases/line100000.5.pts";
-	RunPointSearchComparison(filename, radius);
+	// filename = "cases/offsetCube79x79x79.1603.pts";
+	// RunPointSearchComparison(filename, radius);
+	// filename = "cases/clusterCube6x6x6X4913.490.pts";
+	// RunPointSearchComparison(filename, radius);
+	// filename = "cases/line100000.5.pts";
+	// RunPointSearchComparison(filename, radius);
 
 	return 0;
 }

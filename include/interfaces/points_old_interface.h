@@ -27,14 +27,18 @@ void RunTests(char const Title[], IteratorType PBegin, IteratorType PEnd, Iterat
 	t0 = GetCurrentTime();
 	#pragma omp parallel for
 	for (std::size_t i = 0; i < numsearch; i++) {
-		n = nodes_tree.SearchInRadius(point0, radius0, results0, distances0, MaxResults);
+    IteratorType resultsItr = results0;
+    DistanceIterator distanceItr = distances0;
+		n = nodes_tree.SearchInRadius(point0, radius0, resultsItr, distanceItr, MaxResults);
   }
 	t1 = GetCurrentTime();
 	std::cout << t1 - t0 << "\t";
 
 	t0 = GetCurrentTime();
 	for (std::size_t i = 0; i < numsearch; i++) {
-		n = nodes_tree.SearchInRadius(point0, radius0, results0, distances0, MaxResults);
+    IteratorType resultsItr = results0;
+    DistanceIterator distanceItr = distances0;
+		n = nodes_tree.SearchInRadius(point0, radius0, resultsItr, distanceItr, MaxResults);
   }
 	t1 = GetCurrentTime();
 	std::cout << t1 - t0 << "\t";
