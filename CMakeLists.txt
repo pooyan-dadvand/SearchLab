@@ -6,7 +6,7 @@ set_source_files_properties("*.c" PROPERTIES LANGUAGE CXX )
 set_source_files_properties("*.h" PROPERTIES LANGUAGE CXX )
 
 # Project
-project (SarchLab)
+project (SearchLab)
 
 # Kratos
 include_directories("${KRATOS_PATH}/kratos/")
