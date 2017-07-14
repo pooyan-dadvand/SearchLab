@@ -22,12 +22,12 @@ if(CXX11_COMPILER)
   include_directories("${KRATOS_PATH}/kratos/includes")
   
   # add the executable
-  add_executable(SearchLab SearchLab.cpp)
+  add_executable(SearchLab.exe SearchLab.cpp)
     
   # require a C++11 compiler
   # this seems not to work ...
-  set_property(TARGET SearchLab PROPERTY CXX_STANDARD 11)
-  set_property(TARGET SearchLab PROPERTY CXX_STANDARD_REQUIRED ON)
+  set_property(TARGET SearchLab.exe PROPERTY CXX_STANDARD 11)
+  set_property(TARGET SearchLab.exe PROPERTY CXX_STANDARD_REQUIRED ON)
   # does not work:
   # target_compile_features(SearchLab PUBLIC cxx_constexpr)
 endif()
