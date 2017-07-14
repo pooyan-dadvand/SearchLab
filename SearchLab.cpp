@@ -6,18 +6,25 @@
 #include <cstdlib>
 #include <iomanip>
 
+#if __cplusplus < 201103L
+#error message( "This library needs a C++11 compiler")
+#endif
+
 // Point
 #include "point.h"
 
 // Ugly fixes
 #include <assert.h>
-#define KRATOS_ERROR std::cout
 
 // Kratos Independent
 #define KRATOS_INDEPENDENT
 
+#ifndef KRATOS_INDEPENDENT
+#define KRATOS_ERROR std::cout
+
 // Kratos includes
 #include "spatial_containers/spatial_containers.h"
+#endif // KRATOS_INDEPENDENT
 
 #include "points_bins.h"
 #include "points_hash.h"
