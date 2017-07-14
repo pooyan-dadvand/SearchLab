@@ -20,7 +20,7 @@ public:
 	void Insert(KeyType Key, TDataType& rData) {
 		for (int age = 0; age < MaximumAge; age++) {
 			auto hash_position = GetHash(Key, age);
-			auto& hash_data = mHashTable[hash_position]
+			auto& hash_data = mHashTable[hash_position];
 			if (hash_data.IsEmpty()) {
 				hash_data.SetKey(Key);
 				hash_data.SetData(rData);
