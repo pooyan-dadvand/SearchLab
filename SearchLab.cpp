@@ -162,6 +162,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	typedef double* DistanceVector;
 	typedef double* DistanceIterator;
 
+#ifndef KRATOS_INDEPENDENT
 	typedef Kratos::Bucket<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>       bucket_type;  //Bucket;
 	typedef Kratos::Bins<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>         StaticBinsType;           //StaticBins;
 	typedef Kratos::BinsDynamic<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>  DynamicBinsType; //DynamicBins;
@@ -174,6 +175,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	typedef Kratos::Tree< Kratos::OCTreePartition<StaticBinsType>>               octree_StaticBinsType;      //OctreeBins;
 	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<DynamicBinsType>> kdtree_DynamicBinsType;     //KdtreeBins;
 	typedef Kratos::Tree< Kratos::OCTreePartition<DynamicBinsType>>              octree_bins_type;           //OctreeBins;
+#endif // KRATOS_INDEPENDENT
 
 	// Input data
 	std::cout << std::setprecision(4) << std::fixed;
@@ -264,6 +266,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	RunTestsNewInterface<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // Old Interface
+#ifndef KRATOS_INDEPENDENT
 	RunTestsOldInterface<StaticBinsType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 1);
 	RunTestsOldInterface<DynamicBinsType>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 1);
   RunTestsOldInterface<OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 10);
@@ -271,6 +274,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
   //RunTestsOldInterface<kdtree_type>("KdTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
 	//RunTestsOldInterface<kdtree_average_split_type>("KdTreeAverage", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
 	//RunTestsOldInterface<kdtree_midpoint_split_type>("KdTreeMidpoint", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
+#endif // KRATOS_INDEPENDENT
 
 	return 0;
 }
