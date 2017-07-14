@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 2.8)
+  
+# Project
+project (SearchLab)
 
 # thanks to https://github.com/nathan-osman/CXX11-CMake-Macros
 include(${CMAKE_SOURCE_DIR}/CXX11.cmake)
@@ -13,9 +16,6 @@ if(CXX11_COMPILER)
   set_source_files_properties("*.cc" PROPERTIES LANGUAGE CXX )
   set_source_files_properties("*.cpp" PROPERTIES LANGUAGE CXX )
   set_source_files_properties("*.h" PROPERTIES LANGUAGE CXX )
-  
-  # Project
-  project (SearchLab)
   
   # Kratos
   include_directories("${KRATOS_PATH}/kratos/")
