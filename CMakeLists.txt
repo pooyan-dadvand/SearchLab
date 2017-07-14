@@ -25,8 +25,9 @@ if(CXX11_COMPILER)
   add_executable(SearchLab SearchLab.cpp)
     
   # require a C++11 compiler
-  # neither of these work:
+  # this seems not to work ...
+  set_property(TARGET SearchLab PROPERTY CXX_STANDARD 11)
+  set_property(TARGET SearchLab PROPERTY CXX_STANDARD_REQUIRED ON)
+  # does not work:
   # target_compile_features(SearchLab PUBLIC cxx_constexpr)
-  # set_property(TARGET SearchLab PROPERTY CXX_STANDARD 11)
-  # set_property(TARGET SearchLab PROPERTY CXX_STANDARD_REQUIRED ON)
 endif()
