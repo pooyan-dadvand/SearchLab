@@ -82,8 +82,8 @@ private:
 		}
 	}
 
-	std::uint64_t GetHash(TDataType& rObject, char Age) {
-		return CalculateCellIndex(rObject) + mHashOffsets[Age];
+	std::uint64_t GetHash(KeyType TheKey, char Age, std::size_t HashTableSize) {
+		return (TheKey + mHashOffsets[Age])%HashTableSize;
 	}
 
 };
