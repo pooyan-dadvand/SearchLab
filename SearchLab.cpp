@@ -6,6 +6,9 @@
 #include <cstdlib>
 #include <iomanip>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 // Point
 #include "point.h"
