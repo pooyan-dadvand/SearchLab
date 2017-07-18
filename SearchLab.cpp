@@ -6,9 +6,6 @@
 #include <cstdlib>
 #include <iomanip>
 
-#if __cplusplus < 201103L
-#error message( "This library needs a C++11 compiler")
-#endif
 
 // Point
 #include "point.h"
