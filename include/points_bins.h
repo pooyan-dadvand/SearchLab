@@ -43,18 +43,17 @@ public:
 			length[i] = mCells.CalculatePosition(ThePoint[i] + Radius, i) - mCells.CalculatePosition(ThePoint[i] - Radius, i) + 1;
 		}
 		auto min_cell = mCells.CalculateCellIndex(min_point);
+		auto number_of_cells_in_plane = mCells.GetNumberOfCells(0) *mCells.GetNumberOfCells(1);
 
 		for (std::size_t i_z = 0; i_z < length[2]; i_z++) {
-			auto y_position = min_cell + i_z * mCells.GetNumberOfCells(0) *mCells.GetNumberOfCells(1);
+			auto y_position = min_cell + i_z * number_of_cells_in_plane;
 			for (std::size_t i_y = 0; i_y < length[1]; i_y++) {
-				std::size_t offset = mCells.GetCellBeginIndex(y_position);
-				const std::size_t end_offset = mCells.GetCellBeginIndex(y_position + length[0]);
 				TObjectType** p_point = mpPoints + mCells.GetCellBeginIndex(y_position);
-				for (; offset <end_offset; offset++) {
+				TObjectType** p_end_point = mpPoints + mCells.GetCellBeginIndex(y_position + length[0]);
+				for (; p_point < p_end_point; p_point++) {
 					if (Distance2(**p_point, ThePoint) <= radius2) {
 						rResults.push_back(ResultType(*p_point));
 					}
-					p_point++;
 				}
 				y_position += mCells.GetNumberOfCells(0);
 			}
@@ -82,20 +81,19 @@ public:
 				length[i] = mCells.CalculatePosition(ThePoint[i] + radius, i) - mCells.CalculatePosition(ThePoint[i] - radius, i) + 1;
 			}
 			auto min_cell = mCells.CalculateCellIndex(min_point);
+			auto number_of_cells_in_plane = mCells.GetNumberOfCells(0) *mCells.GetNumberOfCells(1);
 
 			for (std::size_t i_z = 0; i_z < length[2]; i_z++) {
-				auto y_position = min_cell + i_z * mCells.GetNumberOfCells(0) * mCells.GetNumberOfCells(1);
+				auto y_position = min_cell + i_z * number_of_cells_in_plane;
 				for (std::size_t i_y = 0; i_y < length[1]; i_y++) {
-					std::size_t offset = mCells.GetCellBeginIndex(y_position);
-					const std::size_t end_offset = mCells.GetCellBeginIndex(y_position + length[0]);
 					TObjectType** p_point = mpPoints + mCells.GetCellBeginIndex(y_position);
-					for (; offset <end_offset; offset++) {
+					TObjectType** p_end_point = mpPoints + mCells.GetCellBeginIndex(y_position + length[0]);
+					for (; p_point < p_end_point; p_point++) {
 						double distance_2 = Distance2(**p_point, ThePoint);
 						if (distance_2 < current_result.GetDistance2()) {
 							current_result.Set(*p_point);
 							current_result.SetDistance2(distance_2);
 						}
-						p_point++;
 					}
 					y_position += mCells.GetNumberOfCells(0);
 				}
