@@ -20,14 +20,14 @@ public:
 	void Insert(KeyType Key, TDataType& rData) {
 		for (int age = 0; age < MaximumAge; age++) {
 			auto hash_position = GetHash(Key, age);
-			auto& hash_data = mHashTable[hash_position]
+			auto& hash_data = mHashTable[hash_position];
 			if (hash_data.IsEmpty()) {
 				hash_data.SetKey(Key);
 				hash_data.SetData(rData);
 				return;
 			}
 		}
-		throw std::exception("Inserting failed for all hash functions");
+		throw std::runtime_error("Inserting failed for all hash functions");
 	}
 
 	std::size_t Size() {
@@ -42,7 +42,7 @@ public:
 		if (Size() == 0)
 			mHashTable.resize(static_cast<std::size_t>((NewCapacity / LoadFactor) + 1));
 		else
-			throw std::exception("Resizing a non empty hash table is not supported yet");
+			throw std::runtime_error("Resizing a non empty hash table is not supported yet");
 	}
 
 private:
