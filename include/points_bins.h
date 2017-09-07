@@ -8,14 +8,12 @@
 #include "bins_cells_container.h"
 #include "spatial_search_result.h"
 
-
-
-
 template <typename TObjectType>
 class PointsBins {
 	static constexpr int Dimension = 3;
 public:
 	using InternalPointType = std::array<double, Dimension>;
+	using ObjectType = TObjectType;
 	using PointerType = TObjectType*;
 	using ResultType = SpatialSearchResult<TObjectType>;
 
@@ -38,7 +36,7 @@ public:
 	void SearchInRadius(TObjectType const& ThePoint, double Radius, std::vector<ResultType>& rResults) {
 		InternalPointType min_point;
 		std::array<std::size_t, Dimension> length;
-		const double radius2 = Radius * Radius;
+		const double radius2e = std::pow(Radius + std::numeric_limits<double>::epsilon(), 2.0);
 
 		for (int i = 0; i < Dimension; i++) {
 			min_point[i] = ThePoint[i] - Radius;
@@ -53,7 +51,7 @@ public:
 				const std::size_t end_offset = mCells.GetCellBeginIndex(y_position + length[0]);
 				TObjectType** p_point = mpPoints + mCells.GetCellBeginIndex(y_position);
 				for (; offset <end_offset; offset++) {
-					if (Distance2(**p_point, ThePoint) <= radius2) {
+					if (Distance2(**p_point, ThePoint) <= radius2e) {
 						rResults.push_back(ResultType(*p_point));
 					}
 					p_point++;
