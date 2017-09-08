@@ -5,20 +5,22 @@
 #include <cstdlib>
 #include <iomanip>
 
-// Ugly fixes
-#include <assert.h>
-#define KRATOS_ERROR std::cout
-
-// Kratos Independent
-#define KRATOS_INDEPENDENT
+#ifdef USE_KRATOS
+	// Ugly fixes
+	#include <assert.h>
+	#define KRATOS_ERROR std::cout
+#endif
 
 // Containers
 #include "containers.h"
 
 // Interfaces
-#include "interfaces/points_old_interface.h"
 #include "interfaces/points_new_interface.h"
-#include "interfaces/objects_old_interface.h"
+
+#ifdef USE_KRATOS
+	#include "interfaces/points_old_interface.h"
+	#include "interfaces/objects_old_interface.h"
+#endif
 
 int RunPointSearchComparison(std::string Filename, double Radius) {
 
@@ -92,7 +94,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	Point<3> & search_point = mid_point;
   SphereObject<3> & search_object = mid_object;
 
-	std::size_t numsearch = 100000;
+	std::size_t numsearch = 1000000;
 	std::size_t numsearch_nearest = numsearch * 10;
 
 	std::cout << " min point : " << min_point << std::endl;
@@ -136,18 +138,22 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
   PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // - Old Interface
+#ifdef USE_KRATOS
 	PointsOld::RunTests<Containers::BinsStaticType>("StaticBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 1);
 	PointsOld::RunTests<Containers::BinsDynamicType>("DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 1);
   PointsOld::RunTests<Containers::OctreeType>("OctTree\t", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 10);
-  // PointsOld::RunTests<Containers::BinsDynamicOctreeType>("OcTreeDynamic\t", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 10);
+  PointsOld::RunTests<Containers::BinsDynamicOctreeType>("OcTreeDynamic\t", points, points + npoints, p_results, resultDistances.begin(), max_results, allPoints, Radius, numsearch, 10);
+#endif
 
   // Object Interfaces
   // - New Interface
   // TO BE FILLED
 
   // - Old Interface
+#ifdef USE_KRATOS
   ObjectsOld::RunTests<Containers::BinsObjectStaticType>("StaticObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1);
   ObjectsOld::RunTests<Containers::BinsObjectDynamicType>("DynamicObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1);
+#endif
   // RunTestsOldInterface<BinsObjectDynamicType>
 
 	return 0;
@@ -156,8 +162,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 int main(int arg, char* argv[]) {
 	std::string filename;
 
-	double radius = 0.01;
-
+	double radius = 0.0102;
 
 	if (arg > 1) {
 		std::cout << "Argument not founded " << std::endl;
@@ -167,18 +172,18 @@ int main(int arg, char* argv[]) {
 			radius = atof(argv[2]) / 1000000;
 		}
 
-
 		return 0;
 	}
 
-	filename = "cases/genericCube100x100x100.5051.pts";
+	filename = "../cases/genericCube100x100x100.5051.pts";
 	RunPointSearchComparison(filename, radius);
-	filename = "cases/offsetCube79x79x79.1603.pts";
-	RunPointSearchComparison(filename, radius);
-	filename = "cases/clusterCube6x6x6X4913.490.pts";
-	RunPointSearchComparison(filename, radius);
-	filename = "cases/line100000.5.pts";
-	RunPointSearchComparison(filename, radius);
+	
+	// filename = "../cases/offsetCube79x79x79.1603.pts";
+	// RunPointSearchComparison(filename, radius);
+	// filename = "../cases/clusterCube6x6x6X4913.490.pts";
+	// RunPointSearchComparison(filename, radius);
+	// filename = "../cases/line100000.5.pts";
+	// RunPointSearchComparison(filename, radius);
 
 	return 0;
 }

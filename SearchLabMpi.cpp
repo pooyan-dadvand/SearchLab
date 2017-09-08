@@ -5,24 +5,21 @@
 #include <cstdlib>
 #include <iomanip>
 
+// Kratos
 #ifdef USE_KRATOS
 	// Ugly fixes
 	#include <assert.h>
 	#define KRATOS_ERROR std::cout
 
-	// Kratos Independent
-	#define KRATOS_INDEPENDENT
-#endif
-
-// Containers
-#include "containers_mpi.h"
-
-// Interfaces
-#ifdef USE_KRATOS
 	#include "interfaces/points_old_interface.h"
 	#include "interfaces/objects_old_interface.h"
 #endif
 
+// Containers
+#include "containers.h"
+#include "parallel_bins.h"
+
+// Interfaces
 #include "interfaces/points_new_interface_mpi.h"
 
 int RunPointSearchComparison(std::string Filename, double Radius) {
@@ -156,7 +153,6 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 #ifdef USE_KRATOS
   ObjectsOld::RunTests<Containers::BinsObjectStaticType>("StaticObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1);
   ObjectsOld::RunTests<Containers::BinsObjectDynamicType>("DynamicObjects", objects.begin(), objects.end(), objectResults.begin(), resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1);
-  // RunTestsOldInterface<BinsObjectDynamicType>
 #endif
 
 	return 0;
