@@ -5,6 +5,8 @@
 class BinsCellsContainer {
 	static constexpr int Dimension = 3;
 
+protected:
+
 	std::array<std::size_t, Dimension> mNumberOfCells;
 	using InternalPointType = std::array<double, Dimension>;
 	BoundingBox<InternalPointType> mBoundingBox;
@@ -37,8 +39,16 @@ public:
 		mNumberOfCells[Axis] = TheNumberOfCells; 
 	}
 
+	void SetCellBeginIndex(std::size_t Index, std::size_t Value) {
+		mCellsBeginIndices[Index] = Value;
+	}
+
 	std::size_t GetNumberOfCells(std::size_t Axis) const { 
 		return mNumberOfCells[Axis];
+	}
+
+	std::size_t GetTotalNumberOfCells() const { 
+		return mCellsBeginIndices.size();
 	}
 
 	double GetCellSize(std::size_t Axis) {
@@ -97,6 +107,8 @@ private:
 		}
 
 	}
+
+protected:
 
 	template<typename TIteratorType>
 	void InitializeCellsBeginIndices(TIteratorType const& PointsBegin, TIteratorType const& PointsEnd) {
