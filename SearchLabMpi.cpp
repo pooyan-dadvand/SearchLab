@@ -22,6 +22,10 @@
 // Interfaces
 #include "interfaces/points_new_interface_mpi.h"
 
+//Octree includes
+#include "custom_utilities/octree_driver.h"
+#include "custom_utilities/octree_binary_cell.h"
+
 int RunPointSearchComparison(std::string Filename, double Radius) {
 
 	// Input data
@@ -160,35 +164,38 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 
 int main(int arg, char* argv[]) {
 
-	MPI_Init(&arg, &argv);
+  double center[ 3 ] = {0.5,0.5,0.5};
+	double radius = 1.5;
+  int level = 12;
+  
 
+  //TESTS WITH OCTREE DRIVER
 	std::string filename;
-
-	double radius = 0.0102;
-
-	if (arg > 1) {
-		std::cout << "Argument not founded " << std::endl;
-		filename = argv[1];
-
-		if (arg == 3) {
-			radius = atof(argv[2]) / 1000000;
-		}
-
-		return 0;
-	}
-
-	// filename = "../cases/genericCube3x3x3.250000.pts";
-	filename = "../cases/genericCube100x100x100.5051.pts";
-	RunPointSearchComparison(filename, radius);
-	
-	// filename = "../cases/offsetCube79x79x79.1603.pts";
-	// RunPointSearchComparison(filename, radius);
-	// filename = "../cases/clusterCube6x6x6X4913.490.pts";
-	// RunPointSearchComparison(filename, radius);
-	// filename = "../cases/line100000.5.pts";
-	// RunPointSearchComparison(filename, radius);
-
-	MPI_Finalize();
+	  if (arg > 1) {
+		  std::cout << "Argument not founded " << std::endl;
+		  filename = argv[1];
+		  if (arg == 3) {
+  	    radius = atof(argv[2]) / 1000000;
+		  }
+    return 0;
+  }
+  //filename = "../cases/genericCube2x2x2.500000.pts";
+	//filename = "../cases/genericCube10x10x10.55556.pts";
+	//filename = "../cases/genericCube100x100x100.5051.pts";
+	//filename = "../cases/line100000.5.pts";
+	filename = "../cases/offsetCube79x79x79.1603.pts";
+  RunPointSearchOctree( filename , radius , center , level , arg , argv );
 
 	return 0;
 }
+
+
+
+
+
+
+
+
+
+
+

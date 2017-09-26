@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <cstring>
 
 template<class TDataType>
 class GlobalPointer {
