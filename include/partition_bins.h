@@ -10,6 +10,8 @@
 #include "partition_bins_cells_container.h"
 #include "spatial_search_result.h"
 
+#include "timer_mpi.h"
+
 template <typename TObjectType>
 class PartitionBins {
   static constexpr int Dimension = 3;
@@ -111,53 +113,6 @@ public:
       mpPartitions[i] = recvPartitions[i];
     }
 
-    // for(int p = 0; p < mpi_size; p++) {
-    //   if(p == mpi_rank) {
-    //     std::cout << "(" << mpi_rank << ") sendOffsets\n\t";
-    //     for (std::size_t i = 0; i < numberOfCells; i++) {
-    //       std::cout << sendOffsets[i] << " ";
-    //     }
-    //     std::cout << "\nEnd" << std::endl;
-
-    //     std::cout << "recvOffsets\n\t";
-    //     for (std::size_t i = 0; i < numberOfCells; i++) {
-    //       std::cout << recvOffsets[mpi_rank * numberOfCells + i] << " ";
-    //     }
-    //     std::cout << "\nEnd" << std::endl;
-
-    //     std::cout << "globalOffsets\n\t";
-    //     for (std::size_t i = 0; i < numberOfCells; i++) {
-    //       std::cout << globalOffsets[i] << " ";
-    //     }
-    //     std::cout << "\nEnd" << std::endl;
-
-    //     std::cout << "PartsInPerCell\n\t";
-    //     for (std::size_t i = 0; i < NumPartsPerCell; i++) {
-    //       if(sendPartitions[i] != -1) {
-    //         if(sendPartitions[i] < 10) {
-    //           std::cout << "0";
-    //         }
-    //         std::cout << sendPartitions[i] << " ";
-    //       } else {
-    //         std::cout << "--" << " ";
-    //       }
-    //     }
-    //     std::cout << "\n\t";
-    //     for (std::size_t i = 0; i < NumPartsPerCell; i++) {
-    //       if(mpPartitions[i] != -1) {
-    //         if(mpPartitions[i] < 10) {
-    //           std::cout << "0";
-    //         }
-    //         std::cout << mpPartitions[i] << " ";
-    //       } else {
-    //         std::cout << "--" << " ";
-    //       }
-    //     }
-    //     std::cout << "\nEnd" << std::endl;
-    //   }
-    //   MPI_Barrier(MPI_COMM_WORLD);
-    // }
-
     delete[] sendOffsets;
     delete[] recvOffsets;
     delete[] globalOffsets;
@@ -172,10 +127,28 @@ public:
     delete[] recvPartitions;
   }
 
+  // double accum_time, accum_init;
+  // int accum_len;
+  // int accum_res;
+
+  void cleanDebugStorage() {
+    // accum_init = 0.0;
+    // accum_time = 0.0;
+    // accum_len = 0;
+    // accum_res = 0;
+  }
+
+  void printDebugStorage() {
+    // std::cout << "(" << mpi_rank << ") " << accum_init << " " << accum_time << " " << accum_len << " " << accum_res <<std::endl;
+  }
+
   void SearchInRadius(TObjectType const& ThePoint, double Radius, std::vector<ResultType>& rResults) {
     InternalPointType min_point;
     std::array<std::size_t, Dimension> length;
 
+    // double t0, t1;
+
+    // t0 = GetCurrentTime();
     for (int i = 0; i < Dimension; i++) {
       min_point[i] = ThePoint[i] - Radius;
       length[i] = mCells.CalculatePosition(ThePoint[i] + Radius, i) - mCells.CalculatePosition(ThePoint[i] - Radius, i) + 1;
@@ -183,7 +156,11 @@ public:
     auto min_cell = mCells.CalculateCellIndex(min_point);
 
     std::vector<int> usedMask(mpi_size, 0);
+    // t1 = GetCurrentTime();
 
+    // accum_init += (t1 - t0);
+
+    // t0 = GetCurrentTime();
     for (std::size_t i_z = 0; i_z < length[2]; i_z++) {
       auto y_position = min_cell + i_z * mCells.GetNumberOfCells(0) * mCells.GetNumberOfCells(1);
       for (std::size_t i_y = 0; i_y < length[1]; i_y++) {
@@ -201,6 +178,11 @@ public:
         y_position += mCells.GetNumberOfCells(0);
       }
     }
+    // t1 = GetCurrentTime();
+
+    // accum_time += (t1 - t0);
+    // accum_len += (length[2] * length[1]);
+    // accum_res += rResults.size();
   }
 
 private:

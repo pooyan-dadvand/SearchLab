@@ -5,7 +5,6 @@
 #include <iostream>
 #include <algorithm>
 
-#include <time.h>
 #include <assert.h> 
 
 // OpenMP
@@ -17,6 +16,9 @@
 #include "mpi.h"
 #include "partition_bins.h"
 #include "global_pointer.h"
+
+// Timer
+#include "timer_mpi.h"
 
 /**
  * Mpi version of the Bins.
@@ -45,7 +47,7 @@ public:
     InitializeMpi();
 
     GenerateLocalBins(LocalObjectsBegin, LocalObjectsEnd);
-    GeneratePartitionBins(LocalObjectsBegin, LocalObjectsEnd, mpi_size * 16);
+    GeneratePartitionBins(LocalObjectsBegin, LocalObjectsEnd, mpi_size * 10);
   }
 
   /** Assignment operator.
@@ -91,6 +93,8 @@ public:
 
     std::size_t NumberOfObjects = ObjectsEnd - ObjectsBegin;
 
+    double t0, t1, ti;
+
     // Not sure what happens here if a partition ends up having 0 points/objects/elements
     assert(NumberOfObjects > 0);
 
@@ -102,7 +106,7 @@ public:
     std::vector<std::vector<double>> SendRadius(mpi_size, std::vector<double>(0));
     std::vector<std::vector<double>> RecvRadius(mpi_size, std::vector<double>(0));
 
-    std::vector<bool> SentObjectsMap(NumberOfObjects * mpi_size, 0);
+    std::vector<std::vector<int>> SentObjectsIds(mpi_size, std::vector<int>(0));
 
     MPI_Request * sendReq = new MPI_Request[mpi_size];
     MPI_Request * recvReq = new MPI_Request[mpi_size];
@@ -111,14 +115,37 @@ public:
     MPI_Status * recvStat = new MPI_Status[mpi_size];
 
     // Calculate the remote partitions where we need to search for each point and execute the transfer in background
-    SearchPartitions(ObjectsBegin, NumberOfObjects, Radius, SendObjects, SendRadius, SentObjectsMap);
-    SendTransferPoints(SendObjects, sendReq, recvReq);
-    SearchInRadiusLocal(ObjectsBegin, NumberOfObjects, Radius, ResultsArray);
+    mPartitionBins->cleanDebugStorage();
+    t0 = GetCurrentTime();
+    SearchPartitions(ObjectsBegin, NumberOfObjects, Radius, SendObjects, SendRadius, SentObjectsIds);
+    t1 = GetCurrentTime();
+    mPartitionBins->printDebugStorage();
 
+    printMaxTime(t0, t1, mpi_rank, mpi_size, "Partition search time");
+
+    t0 = GetCurrentTime();
+    SendTransferPoints(SendObjects, sendReq, recvReq);
+    t1 = GetCurrentTime();
+
+    printMaxTime(t0, t1, mpi_rank, mpi_size, "Send spawn time");
+
+    t0 = GetCurrentTime();
+    SearchInRadiusLocal(ObjectsBegin, NumberOfObjects, Radius, ResultsArray);
+    t1 = GetCurrentTime();
+
+    printMaxTime(t0, t1, mpi_rank, mpi_size, "Loacal search time");
+
+    t0 = GetCurrentTime();
     // Recv the points after the local search has finished and execute the remote search (all points should be here by now)
     for(int p = 0; p < mpi_size; p++) {
       RecvTransferPoints(RecvObjects, sendReq, recvReq, sendStat, recvStat, p);
+    }
+    t1 = GetCurrentTime();
 
+    printMaxTime(t0, t1, mpi_rank, mpi_size, "Recv gather time");
+
+    t0 = GetCurrentTime();
+    for(int p = 0; p < mpi_size; p++) {
       if(p != mpi_rank && RecvObjects[p].size() != 0) {
         auto ObjectsRemoteBeg = RecvObjects[p].begin();
         auto ObjectsRemoteEnd = RecvObjects[p].end();
@@ -129,20 +156,34 @@ public:
         SearchInRadiusLocal(ObjectsRemoteBeg, NumberOfRecvObjects, Radius, SendResults[p]);
       }
     }
+    t1 = GetCurrentTime();
+
+    printMaxTime(t0, t1, mpi_rank, mpi_size, "Remote search time");
     
     // Send the results (global pointers) back to the propper process and merge with the localss
+    t0 = GetCurrentTime();
     TransferResults(SendObjects, SendResults, RecvResults);
-    AssembleResults(SentObjectsMap, ResultsArray, RecvResults);
+    t1 = GetCurrentTime();
 
-    // std::size_t accumNumResults = 0;
-    // for(std::size_t i = 0; i < NumberOfObjects; i++) {
-    //   accumNumResults += ResultsArray[i].size();
-    //   // std::cout << "(" << mpi_rank << ") Point (" << (*(ObjectsBegin + i))[0] << "," << (*(ObjectsBegin + i))[1] << "," << (*(ObjectsBegin + i))[2] << ") results: " << ResultsArray[i].size() << std::endl;
-    // }
+    printMaxTime(t0, t1, mpi_rank, mpi_size, "Transfer res time");
 
-    // MPI_Barrier(MPI_COMM_WORLD);
+    t0 = GetCurrentTime();
+    AssembleResults(SentObjectsIds, ResultsArray, RecvResults);
+    t1 = GetCurrentTime();
 
-    // std::cout << "Finish: " << accumNumResults << std::endl;
+    printMaxTime(t0, t1, mpi_rank, mpi_size, "Aseemble results");
+
+    std::size_t accumNumResults = 0;
+    for(std::size_t i = 0; i < NumberOfObjects; i++) {
+      accumNumResults += ResultsArray[i].size();
+      // std::cout << "(" << mpi_rank << ") Point (" << (*(ObjectsBegin + i))[0] << "," << (*(ObjectsBegin + i))[1] << "," << (*(ObjectsBegin + i))[2] << ") results: " << ResultsArray[i].size() << std::endl;
+    }
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if(!mpi_rank) {
+      std::cout << "Finish: " << ResultsArray[NumberOfObjects/2].size() << " " << accumNumResults << std::endl;
+    }
 
     delete[] sendReq;
     delete[] recvReq;
@@ -206,7 +247,7 @@ private:
       double const & Radius,
       std::vector<std::vector<ObjectType>> & SendObjects,
       std::vector<std::vector<double>> & SendRadius,
-      std::vector<bool> & SentObjectsMap) {
+      std::vector<std::vector<int>> & SendObjectsIds) {
 
     // int TotalToSend = 0;
     // int GlobalToSend = 0;
@@ -214,23 +255,39 @@ private:
     // int TotalNumObjects = NumberOfObjects;
     // int GlobalNumObjects = 0;
 
+    double t0, t1, tx, tz;
+    double accum_a = 0.0;
+    double accum_b = 0.0;
+
+    tx = GetCurrentTime();
     for(std::size_t i = 0; i < NumberOfObjects; i++) {
       auto ObjectItr = ObjectsBegin + i;
 
+      t0 = GetCurrentTime();
       std::vector<typename TPartitionBins::ResultType> partitionList;
       mPartitionBins->SearchInRadius(*ObjectItr, Radius, partitionList);
+      t1 = GetCurrentTime();
 
+      accum_a += (t1 - t0);
+
+      t0 = GetCurrentTime();
       for(std::size_t j = 0; j < partitionList.size(); j++) {
         int part = partitionList[j];
         if(part != mpi_rank && part != -1){
           SendObjects[part].push_back(*ObjectItr);
           SendRadius[part].push_back(Radius);
-
-          SentObjectsMap[part*NumberOfObjects+i]=1;
+          SendObjectsIds[part].push_back(i);
           // TotalToSend++;
         }
       }
+      t1 = GetCurrentTime();
+      accum_b += (t1 - t0);
     }
+    tz = GetCurrentTime();
+
+    printMaxTime(0.0, accum_a, mpi_rank, mpi_size, "Search? ");
+    printMaxTime(0.0, accum_b, mpi_rank, mpi_size, "Arrays? ");
+    printMaxTime(tx, tz, mpi_rank, mpi_size, "Total? ");
 
     // MPI_Allreduce(&TotalToSend, &GlobalToSend, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     // MPI_Allreduce(&TotalNumObjects, &GlobalNumObjects, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
@@ -273,11 +330,17 @@ private:
     sendBuffers = std::vector<double *>(mpi_size, nullptr);
     recvBuffers = std::vector<double *>(mpi_size, nullptr);
 
+    
     for(int p = 0; p < mpi_size; p++) {
       sendSize[p] = sendObjects[p].size();
     }
 
     MPI_Alltoall(sendSize, 1, MPI_INT, recvSize, 1, MPI_INT, MPI_COMM_WORLD);
+    // std::cout << "(" << mpi_rank << ") sendrecvSize: ";
+    // for(int p = 0; p < mpi_size; p++) {
+    //   std::cout << "[" << p << "] " << sendSize[p] << "|" << sendSize[p];
+    // }
+    // std::cout << std::endl;
 
     for(int p = 0; p < mpi_size; p++) {
       sendBuffers[p] = new double[sendSize[p] * 3];
@@ -437,19 +500,18 @@ private:
    * @param  Results        List of local results for this process search points.
    * @param  recvResults    List of remote results for this process search points.
    */
-  void AssembleResults(const std::vector<bool> & SentObjectsMap, std::vector<ResultArray> & Results, std::vector<std::vector<ResultArray>> & recvResults) {
-    std::size_t NumberOfObjects = Results.size();
-    
+  void AssembleResults(std::vector<std::vector<int>> & SendObjectsIds, std::vector<ResultArray> & Results, std::vector<std::vector<ResultArray>> & recvResults) {
     for(int p = 0; p < mpi_size; p++) {
-      if(p != mpi_rank) {
+      auto sentToProc = SendObjectsIds[p].size();
+      if(sentToProc) {
         std::size_t recvResIndex = 0;
-        for(std::size_t i = 0; i < NumberOfObjects; i++) { // Iterate over the results arrays
-          if(SentObjectsMap[p * NumberOfObjects + i]) {    // If the object was sent to proc i to search
-            for(std::size_t j = 0; j < recvResults[p][recvResIndex].size(); j++) {
-              Results[i].push_back(recvResults[p][recvResIndex][j]);
-            }
-            recvResIndex++;
+        for(std::size_t i = 0; i < sentToProc; i++) { // Iterate over the results arrays
+          auto numRemResults = recvResults[p][recvResIndex].size();
+          if(numRemResults > 0) { // It still can be 0!!!
+            Results[SendObjectsIds[p][i]].reserve(Results[SendObjectsIds[p][i]].size()+numRemResults);
+            Results[SendObjectsIds[p][i]].insert(Results[SendObjectsIds[p][i]].end(),recvResults[p][recvResIndex].begin(), recvResults[p][recvResIndex].end());
           }
+          recvResIndex++;
         }
       }
     }
