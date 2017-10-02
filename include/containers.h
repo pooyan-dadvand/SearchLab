@@ -6,8 +6,8 @@
 #include "sphere_object.h"
 
 #ifdef USE_KRATOS
-	#include "configures/sphere_object_configure.h"
-	#include "spatial_containers/spatial_containers.h"
+  #include "configures/sphere_object_configure.h"
+  #include "spatial_containers/spatial_containers.h"
 #endif
 
 constexpr std::size_t Dim = 3;
@@ -46,7 +46,7 @@ namespace Containers {
   typedef Entities::PtrObjectType * ObjectVector;
   typedef double* DistanceVector;
 
-#ifdef USE_KRATOS 
+#ifdef USE_KRATOS
   // Bucket ( Can't see any use besides the octree )
   typedef Kratos::Bucket<
     Dim,
