@@ -14,6 +14,7 @@
 #include <iomanip>
 
 //my files and other files
+#include "geometric_operations.h"
 #include "octree_binary.h"
 #include "octree_binary_cell.h"
 #include "mpi.h"
@@ -32,6 +33,8 @@ class Node{
   double coords[ 3 ];
   key_type keys[ 3 ];
   int rank;
+  int n_neighbours;
+  
 public:
   Node( double x_coord , double y_coord , double z_coord , int my_rank , key_type x_key , key_type y_key , key_type z_key ){
     coords[ 0 ] = x_coord;
@@ -41,23 +44,56 @@ public:
     keys[ 0 ] = x_key;
     keys[ 1 ] = y_key;
     keys[ 2 ] = z_key;
+    n_neighbours = 0;
   }
+
   double _GetCoord( int i_pos ){
     return coords[ i_pos ];
   }
+
   int _GetRank(){
     return rank;
   }
+
   key_type _GetKey( int i_pos ){
     return keys[ i_pos ];
   }
+
+  int _GetNNeighbours(){
+    return n_neighbours;
+  }
+  
+  void SumNeighbour(  ){
+    n_neighbours++;
+  }
+
+  void Intersects( double radius , Node* neighbour_node ){
+    double neighbour_center[ 3 ];
+    neighbour_center[ 0 ] = neighbour_node->_GetCoord( 0 );
+    neighbour_center[ 1 ] = neighbour_node->_GetCoord( 1 );
+    neighbour_center[ 2 ] = neighbour_node->_GetCoord( 2 );
+    if(  Distance( coords , neighbour_center ) <= radius  ){
+      n_neighbours++;
+      neighbour_node->SumNeighbour();
+    }
+  }
+
+  void Intersects( double radius , double* neighbour_coords ){
+    if(  Distance( coords , neighbour_coords ) <= radius  ){
+      n_neighbours++;
+    }
+  }
+
 };
 
-std::vector<Node> ReadPointsInfo( std::string filename , int refinement_level ){
+void ReadPointsInfo( std::string filename , int refinement_level , std::vector<Node*>& Points ){
   std::ifstream myfile;
   //OPENING POINTS DATA FILE
   myfile.open( filename );
-  std::vector<Node> Points;
+	if(!myfile) {
+		std::cout << "******ERROR: Can not open points file******" << std::endl;
+		exit( 0 );
+	}
   int n_points , trash , rank;
   double coords[ 3 ];
   myfile >> n_points;
@@ -95,27 +131,100 @@ std::vector<Node> ReadPointsInfo( std::string filename , int refinement_level ){
                 ((keys[ 2 ] & (1<<(ROOT_LEVEL-(i_level+1))))/(1<<(ROOT_LEVEL-(i_level+1))))*4 );
     }
     rank = pow( 8 , refinement_level ) - rank -1;
-    Node aux( coords[ 0 ] , coords[ 1 ] , coords[ 2 ] , rank , keys[ 0 ]+flag[ 0 ] , keys[ 1 ]+flag[ 1 ] , keys[ 2 ]+flag[ 2 ] );
+    Node* aux = new Node( coords[ 0 ] , coords[ 1 ] , coords[ 2 ] , rank , keys[ 0 ]+flag[ 0 ] , keys[ 1 ]+flag[ 1 ] , keys[ 2 ]+flag[ 2 ] );
     Points.push_back( aux );
-
+    
   }  
   //CLOSING POINTS DATA FILE
   myfile.close();
-  return Points;
 }
 
 struct DataInsideOctreeCell
 {
-  std::vector<Node> Points;
+  std::vector<Node*> Points;
+  std::vector<int> NL_indexes;
 public:
-  DataInsideOctreeCell(){
-    
+  DataInsideOctreeCell( ){
+
   }
   ~DataInsideOctreeCell(){
 
   }
-  
-};
+  size_t _GetNNodes(){
+    return Points.size();
+  }
+
+  size_t _GetNNeighbours(){
+    return NL_indexes.size();
+  }
+
+  int GetIndex( int i_pos ){
+    return NL_indexes[ i_pos ];
+  }
+
+  void SetNode( Node* node ){
+    Points.push_back( node );
+  }
+
+  Node* GetNode( size_t i_node ){
+    return Points[ i_node ];
+  }
+
+  void SetNeighbour( int rank ){
+    bool flag = false;
+    for(  size_t i_pos = 0  ;  i_pos < NL_indexes.size()  ;  i_pos++   ){
+      if(  NL_indexes[ i_pos ] == rank  ){
+        flag = true;
+        break;
+      }
+    }
+    if(  !flag  ){
+      NL_indexes.push_back( rank );
+      sort(NL_indexes.begin(), NL_indexes.end(), [](const int a, const int b) {return a > b; });
+    }
+  }
+
+  void CountLocalNeighbours( double radius ){
+    if(  Points.size() > 1  ){
+      size_t n_nodes = Points.size();
+      for(  size_t i_node = 0  ;  i_node < ( n_nodes - 1  )  ;  i_node++  ){
+        Node* node = Points[ i_node ];
+        for(  size_t j_node = ( i_node + 1 )  ;  j_node < n_nodes  ;  j_node++  ){
+          Node* other_node = Points[ j_node ];
+          node->Intersects( radius , other_node );
+        }
+      }
+    }
+  }
+
+  void CountNeighbourCellNeighbours( double radius , DataInsideOctreeCell* data ){
+    size_t local_nodes = Points.size();
+    size_t neighbour_nodes = data->_GetNNodes();
+    for(  size_t i_node = 0  ;  i_node < local_nodes  ;  i_node++  ){
+      Node* local_node = Points[ i_node ];
+      for(  size_t j_node = 0  ;  j_node < neighbour_nodes  ;  j_node++  ){
+        Node* neighbour_node = data->GetNode( j_node );
+        local_node->Intersects( radius , neighbour_node );
+      }
+    } 
+  } 
+
+  void CountNeighbourRankNeighbours( int rank , double radius , std::vector<std::vector<double>>& Recv_coords ){
+    size_t n_nodes = Points.size();
+    for(  size_t i_node = 0  ;  i_node < n_nodes  ;  i_node++  ){
+      Node* node = Points[ i_node ];
+      size_t n_points = Recv_coords[ rank ].size()/3;
+      for(  size_t i_point = 0  ;  i_point < n_points  ;  i_point++  ){
+        double coord[ 3 ];
+        coord[ 0 ] = Recv_coords[ rank ][ i_point * 3 + 0 ];
+        coord[ 1 ] = Recv_coords[ rank ][ i_point * 3 + 1 ];
+        coord[ 2 ] = Recv_coords[ rank ][ i_point * 3 + 2 ];
+        node->Intersects( radius , coord );
+      }
+    }
+  }
+
+};  
 
 class OctreeConfigure {
 public:
@@ -149,20 +258,27 @@ typedef std::vector<OctreeCell*> OctreeCell_vector;
 
 
 class Comunicator{
-
 	int mpi_rank;
 	int mpi_size;
+  int g_level;
+  int **connectivities;
+
 
 	public:
 		Comunicator(int argc,char **argv){
 			MPI_Init( &argc , &argv );
 			MPI_Comm_rank( MPI_COMM_WORLD , &mpi_rank );
 			MPI_Comm_size( MPI_COMM_WORLD , &mpi_size );
+      g_level = (int)(log( mpi_size )/log( 8 ));
 		}
 
 		~Comunicator(){
       MPI_Finalize();
-    }
+      for(  int i_ren = 0  ;  i_ren < mpi_size  ;  i_ren++  ){
+        delete[] connectivities[ i_ren ];
+      }
+      delete[] connectivities;
+    } 
 
 		int  _GetRank(){
       return mpi_rank;
@@ -172,8 +288,48 @@ class Comunicator{
       return mpi_size;
     }
 
+		int  _GetLevel(){
+      return g_level;
+    }
+
 		void _Synchronize(){
       MPI_Barrier( MPI_COMM_WORLD );
+    }
+
+    int GetRankFromKey( key_type* keys ){
+      int rank = 0;
+      for(  int i_level = 0  ;  i_level < g_level  ;  i_level++  ){
+        rank *= 8;
+        rank += ( ((keys[ 0 ] & (1<<(ROOT_LEVEL-(i_level+1))))/(1<<(ROOT_LEVEL-(i_level+1)))) +
+                  ((keys[ 1 ] & (1<<(ROOT_LEVEL-(i_level+1))))/(1<<(ROOT_LEVEL-(i_level+1))))*2 +
+                  ((keys[ 2 ] & (1<<(ROOT_LEVEL-(i_level+1))))/(1<<(ROOT_LEVEL-(i_level+1))))*4 );
+      }
+      rank = pow( 8 , g_level ) - rank -1;
+      return rank;
+    }
+
+    void CreateConnectivitiesMatrix( OctreeCell_vector& leaves ){
+      connectivities = new int*[ mpi_size ];
+      for(  int i_ren = 0  ;  i_ren < mpi_size  ;  i_ren++  ){
+        connectivities[ i_ren ] = new int[ mpi_size ];
+      }
+      for(  int i_ren = 0  ;  i_ren < mpi_size  ;  i_ren++  ){
+          for(  int i_col = 0  ;  i_col < mpi_size  ;  i_col++){
+              connectivities[ i_ren ][ i_col ] = 0;
+          }
+      }
+      for(  size_t i_leaf = 0  ;  i_leaf < leaves.size()  ;  i_leaf++  ){
+        OctreeCell* leaf = leaves[ i_leaf ];
+        for(  size_t i_dir = 0  ;  i_dir < 18  ;  i_dir++  ){
+          key_type neighbour_key[ 3 ];
+          if(  leaf->GetNeighbourKey( i_dir , neighbour_key )  ){
+            int rank = GetRankFromKey( neighbour_key );
+            if(  rank != (int)i_leaf  ){
+              connectivities[ i_leaf ][ rank ] = 1;
+            }
+          }
+        }
+      }
     }
 
     void MasterSendCellToSlave( int rank , OctreeCell* cell ){
@@ -213,12 +369,12 @@ class Comunicator{
       return copy;
     }
 
-    void MasterSendNodesToSlave( int rank , std::vector<Node> Points ){
+    void MasterSendNodesToSlave( int rank , std::vector<Node*>& Points ){
       int n_nodes = 0;
       int begin_position = -1;
       int flag = 0;
       for(  size_t i_node = 0  ;  i_node < Points.size()  ;  i_node++  ){
-        if(  Points[ i_node ]._GetRank() == rank  ){
+        if(  Points[ i_node ]->_GetRank() == rank  ){
           if(  flag == 0  ){
             begin_position = (int)i_node;
             flag = 1;
@@ -229,54 +385,254 @@ class Comunicator{
         }
       }
       MPI_Send( &n_nodes , 4 , MPI_BYTE , rank , 0 , MPI_COMM_WORLD );
-      void *buff = malloc(52*n_nodes);
-      int position = 0;
-      for(  int i_node = 0  ;  i_node < n_nodes  ;  i_node++  ){
-        double coord[ 3 ];
-        key_type keys[ 3 ];
-        for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
-          coord[ i_dim ] = Points[ begin_position + i_node ]._GetCoord( i_dim ); 
-          keys[ i_dim ] = Points[ begin_position + i_node ]._GetKey( i_dim ); 
+      if(  n_nodes > 0  ){
+        void *buff = malloc(52*n_nodes);
+        int position = 0;
+        for(  int i_node = 0  ;  i_node < n_nodes  ;  i_node++  ){
+          double coord[ 3 ];
+          key_type keys[ 3 ];
+          for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
+            coord[ i_dim ] = Points[ begin_position + i_node ]->_GetCoord( i_dim ); 
+            keys[ i_dim ] = Points[ begin_position + i_node ]->_GetKey( i_dim ); 
+          }
+          for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  )
+            MPI_Pack( &coord[ i_dim ] , 8 , MPI_BYTE , buff , 52*n_nodes , &position , MPI_COMM_WORLD );
+
+          MPI_Pack( &rank , 4 , MPI_BYTE , buff , 52*n_nodes , &position , MPI_COMM_WORLD );
+
+          for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  )
+            MPI_Pack( &keys[ i_dim ] , 8 , MPI_BYTE , buff , 52*n_nodes , &position , MPI_COMM_WORLD );
+
         }
-        for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  )
-          MPI_Pack( &coord[ i_dim ] , 8 , MPI_BYTE , buff , 52*n_nodes , &position , MPI_COMM_WORLD );
-
-        MPI_Pack( &rank , 4 , MPI_BYTE , buff , 52*n_nodes , &position , MPI_COMM_WORLD );
-
-        for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  )
-          MPI_Pack( &keys[ i_dim ] , 8 , MPI_BYTE , buff , 52*n_nodes , &position , MPI_COMM_WORLD );
-
+        MPI_Send( buff , position , MPI_PACKED , rank , 0 , MPI_COMM_WORLD );
+        free( buff );
       }
-      MPI_Send( buff , position , MPI_PACKED , rank , 0 , MPI_COMM_WORLD );
-      free( buff );
     }
 
-    std::vector<Node> SlaveReceiveNodesFromMaster( ){
+    void SlaveReceiveNodesFromMaster( std::vector<Node*>& Points ){
       int n_nodes;
       MPI_Recv( &n_nodes , 4 , MPI_BYTE , 0 , 0 , MPI_COMM_WORLD , MPI_STATUS_IGNORE );
-      void* buff = malloc( 52 * n_nodes );
-      MPI_Recv( buff , 52 * n_nodes , MPI_BYTE , 0 , 0 , MPI_COMM_WORLD , MPI_STATUS_IGNORE );
-      std::vector<Node> Points;
-      char *ptr = (char*)buff;
-      for(  int i_node = 0  ;  i_node < n_nodes  ;  i_node++  ){
-        double coord[ 3 ];
-        key_type keys[ 3 ];
-        int rank;
-        for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
-          coord[ i_dim ] = *((double*)(ptr));
-          ptr += 8;
+      if(  n_nodes > 0  ){
+        void* buff = malloc( 52 * n_nodes );
+        MPI_Recv( buff , 52 * n_nodes , MPI_BYTE , 0 , 0 , MPI_COMM_WORLD , MPI_STATUS_IGNORE );
+        char *ptr = (char*)buff;
+        for(  int i_node = 0  ;  i_node < n_nodes  ;  i_node++  ){
+          double coord[ 3 ];
+          key_type keys[ 3 ];
+          int rank;
+          for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
+            coord[ i_dim ] = *((double*)(ptr));
+            ptr += 8;
+          }
+          rank = *((int*)(ptr));
+          ptr += 4;
+          for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
+            keys[ i_dim ] = *((size_t*)(ptr));
+            ptr += 8;
+          }
+          Node* aux = new Node( coord[ 0 ] , coord[ 1 ] , coord[ 2 ] , rank , keys[ 0 ] , keys[ 1 ] , keys[ 2 ] );
+          Points.push_back( aux ); 
         }
-        rank = *((int*)(ptr));
-        ptr += 4;
-        for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
-          keys[ i_dim ] = *((size_t*)(ptr));
-          ptr += 8;
-        }
-        Node aux( coord[ 0 ] , coord[ 1 ] , coord[ 2 ] , rank , keys[ 0 ] , keys[ 1 ] , keys[ 2 ] );
-        Points.push_back( aux ); 
+        free( buff );
       }
-      free( buff );
-      return Points;
+    }
+
+    void AssignBoundaryInformation( OctreeCell* local_root ){
+      OctreeCell_vector leaves;
+      OctreeCell_vector cells_stack;
+      cells_stack.push_back( local_root );
+      while( !cells_stack.empty() ){
+        OctreeCell* cell = cells_stack.back();
+        cells_stack.pop_back();
+        if( cell->HasChildren() ){
+          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
+            cells_stack.push_back( cell->pGetChild( i_child ) );
+          }
+        }else{
+          leaves.push_back( cell );
+        }
+      }
+      size_t n_leaves = leaves.size();
+      for(  size_t i_leaf = 0  ;  i_leaf < n_leaves  ;  i_leaf++  ){
+        OctreeCell* cell = leaves[ i_leaf ];
+        if(  cell->GetIntersection()  ){
+          DataInsideOctreeCell* data = cell->pGetData();
+          for(  size_t i_dir = 0  ;  i_dir < 18  ;  i_dir++  ){
+            key_type neighbour_key[ 3 ];
+            if(  cell->GetNeighbourKey( i_dir , neighbour_key )  ){
+              int rank = GetRankFromKey( neighbour_key );
+              if(  rank != mpi_rank  ){
+                data->SetNeighbour( rank );
+              }
+            }
+          }
+        }else{
+          if(  cell->pGetData()  ){
+            cell->DeleteData();
+          }
+        }
+      }
+    }
+
+    void SetLocalNeighbours( OctreeCell* local_root , double radius ){
+      OctreeCell_vector leaves;
+      OctreeCell_vector cells_stack;
+      cells_stack.push_back( local_root );
+      while( !cells_stack.empty() ){
+        OctreeCell* cell = cells_stack.back();
+        cells_stack.pop_back();
+        if( cell->HasChildren() ){
+          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
+            cells_stack.push_back( cell->pGetChild( i_child ) );
+          }
+        }else{
+          leaves.push_back( cell );
+        }
+      }
+      size_t n_leaves = leaves.size();
+      for(  size_t i_leaf = 0  ;  i_leaf < n_leaves  ;  i_leaf++  ){
+        OctreeCell* cell = leaves[ i_leaf ];
+        if(  cell->GetIntersection()  ){
+          DataInsideOctreeCell* data = cell->pGetData();
+          data->CountLocalNeighbours( radius );
+          for(  size_t i_dir = 0  ;  i_dir < 18  ;  i_dir++  ){
+            key_type neighbour_key[ 3 ];
+            if(  cell->GetNeighbourKey( i_dir , neighbour_key )  ){
+              int rank = GetRankFromKey( neighbour_key );
+              if(  rank == mpi_rank   ){
+                OctreeCell* neighbour_cell = local_root;
+                for(  size_t i_level = 0  ;  i_level < ROOT_LEVEL  ;  i_level++  ){
+                    if(  neighbour_cell->IsLeaf()  ) {
+                        break;
+                    }
+                    neighbour_cell = neighbour_cell->pGetChild( neighbour_key[ 0 ] , neighbour_key[ 1 ] , neighbour_key[ 2 ] );
+                }
+                if(  neighbour_cell->GetIntersection( )  ){
+                  DataInsideOctreeCell* neighbour_data = neighbour_cell->pGetData();
+                  data->CountNeighbourCellNeighbours( radius , neighbour_data );
+                }
+              }
+            }
+          }
+
+        }
+      }
+    }
+
+    void GetCoordsToSend( OctreeCell_vector& leaves , std::vector<std::vector<double>>& coords ){
+      size_t n_leaves = leaves.size();
+      for(  size_t i_leaf = 0  ;  i_leaf < n_leaves  ;  i_leaf++  ){
+        OctreeCell* cell = leaves[ i_leaf ];
+        if(  cell->GetIntersection()  ){
+          DataInsideOctreeCell* data = cell->pGetData();
+          size_t n_neighbours = data->_GetNNeighbours();
+          if(  n_neighbours  ){
+            for(  size_t i_neighbour = 0  ;  i_neighbour < n_neighbours  ;  i_neighbour++  ){
+              int index = data->GetIndex( (int)i_neighbour );
+              size_t n_nodes = data->_GetNNodes();
+              for(  size_t i_node = 0  ;  i_node < n_nodes  ;  i_node++  ){
+                coords[ index ].push_back( data->GetNode( i_node )->_GetCoord( 0 ) );
+                coords[ index ].push_back( data->GetNode( i_node )->_GetCoord( 1 ) );
+                coords[ index ].push_back( data->GetNode( i_node )->_GetCoord( 2 ) );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    void SendAndReceiveCoordinates(  std::vector<std::vector<double>>& Send , std::vector<std::vector<double>>& Recv  ){
+
+      MPI_Request* Send_req = new MPI_Request[ mpi_size ];
+      MPI_Request* Recv_req = new MPI_Request[ mpi_size ];
+
+      MPI_Status* Send_stat = new MPI_Status[ mpi_size ];
+      MPI_Status* Recv_stat = new MPI_Status[ mpi_size ];
+
+      int* Send_size = new int[ mpi_size ];
+      int* Recv_size = new int[ mpi_size ];
+
+      for(  int i_rank = 0  ;  i_rank < mpi_size  ;   i_rank++  ){
+        Send_size[ i_rank ] = (int)Send[ i_rank ].size();
+      }
+
+      MPI_Alltoall( Send_size , 1 , MPI_INT , Recv_size , 1 , MPI_INT , MPI_COMM_WORLD );
+
+      std::vector<double*> Send_Buffers( mpi_size , nullptr );
+      std::vector<double*> Recv_Buffers( mpi_size , nullptr );
+  
+      for(  int i_rank = 0  ;  i_rank < mpi_size  ;  i_rank++  ){
+        Send_Buffers[ i_rank ] = new double[ Send_size[ i_rank ] ];
+        Recv_Buffers[ i_rank ] = new double[ Recv_size[ i_rank ] ];
+        for(  int i_pos = 0  ;  i_pos < Send_size[ i_rank ]  ;  i_pos++  ){
+          Send_Buffers[ i_rank ][ i_pos ] = Send[ i_rank ][ i_pos ];
+        }
+          MPI_Isend( Send_Buffers[ i_rank ] , Send_size[ i_rank ] , MPI_DOUBLE , i_rank , 0 , MPI_COMM_WORLD , &Send_req[ i_rank ] );
+          MPI_Irecv( Recv_Buffers[ i_rank ] , Recv_size[ i_rank ] , MPI_DOUBLE , i_rank , 0 , MPI_COMM_WORLD , &Recv_req[ i_rank ] );
+      }
+      for(  int i_rank = 0  ;  i_rank < mpi_size  ;  i_rank++  ){
+        MPI_Wait( &Send_req[ i_rank ] , &Send_stat[ i_rank ] );
+        MPI_Wait( &Recv_req[ i_rank ] , &Recv_stat[ i_rank ] );
+        for(  int i_pos = 0  ;  i_pos < Recv_size[ i_rank ]  ;  i_pos++  ){
+          Recv[ i_rank ].push_back( Recv_Buffers[ i_rank ][ i_pos ] );
+        }
+        delete[] Send_Buffers[ i_rank ];
+        delete[] Recv_Buffers[ i_rank ];
+      }     
+
+      delete[] Send_size;
+      delete[] Recv_size;
+
+      delete[] Send_req;
+      delete[] Recv_req;
+
+      delete[] Send_stat;
+      delete[] Recv_stat;
+
+    }
+
+    void SearchInNeighboursReceived( OctreeCell_vector& leaves , std::vector<std::vector<double>>& Recv_coords , double radius ){
+      size_t n_leaves = leaves.size();
+      for(  size_t i_leaf = 0  ;  i_leaf < n_leaves  ;  i_leaf++  ){
+        OctreeCell* cell = leaves[ i_leaf ];
+        if(  cell->GetIntersection()  ){
+          DataInsideOctreeCell* data = cell->pGetData();
+          size_t n_neighbours = data->_GetNNeighbours();
+          if(  n_neighbours  ){
+            for(  size_t i_neighbour = 0  ;  i_neighbour < n_neighbours  ;  i_neighbour++  ){
+              int rank = data->GetIndex( (int)i_neighbour );
+              data->CountNeighbourRankNeighbours( rank , radius , Recv_coords );
+            }
+          }
+        }
+      }
+    }
+
+    void SetGlobalNeighbours( OctreeCell* local_root , double radius ){
+      std::vector<std::vector<double>> Send_coords ( mpi_size , std::vector<double> (0) );
+      std::vector<std::vector<double>> Recv_coords ( mpi_size , std::vector<double> (0) );
+      OctreeCell_vector leaves;
+      OctreeCell_vector cells_stack;
+      cells_stack.push_back( local_root );
+      while( !cells_stack.empty() ){
+        OctreeCell* cell = cells_stack.back();
+        cells_stack.pop_back();
+        if( cell->HasChildren() ){
+          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
+            cells_stack.push_back( cell->pGetChild( i_child ) );
+          }
+        }else{
+          leaves.push_back( cell );
+        }
+      }
+      GetCoordsToSend( leaves , Send_coords );
+      SendAndReceiveCoordinates(  Send_coords , Recv_coords  );
+      SearchInNeighboursReceived( leaves , Recv_coords , radius );
+    }
+
+    void NeighboursSearch( OctreeCell* local_root , double radius ){
+      SetLocalNeighbours( local_root , radius );
+      SetGlobalNeighbours( local_root , radius );
     }
 };
 
@@ -391,7 +747,7 @@ public:
 	  OctreeCell_vector leaves;
 	  octree_bin->GetAllLeavesVector( leaves );
 	  nleaves = (int)( leaves.size() );
-	  std::cout << mpi_rank << " writing " << nleaves << " leaves" << std::endl;
+	  //std::cout << mpi_rank << " writing " << nleaves << " leaves" << std::endl;
 	  rOStream << "MESH \"leaves\" dimension 3 ElemType Hexahedra Nnode 8\n";
 	  rOStream << "# color 96 96 96" << std::endl;
 	  rOStream << "Coordinates" << std::endl;
@@ -410,6 +766,7 @@ public:
 				  for(  size_t h = 0  ;  h < 2  ;  h++  ) {
 					  rOStream << node_index++ << "  " << min_point[ 0 ] + j * cell_size << "  " << min_point[ 1 ] + k * cell_size << "  " << min_point[ 2 ] + h * cell_size << std::endl;
 				  }
+
 	  }
 	  rOStream << "end coordinates" << std::endl;
 	  rOStream << "Elements" << std::endl;
@@ -426,291 +783,242 @@ public:
 	  rOStream.close();
 
   }
-	void AsignRankLeaves( OctreeCell_vector leaves);
-	int BalanceOctreeMPI( Comunicator *com );
-	void BalanceOctreeIntraprocess();
-	void BalanceOctreeInterprocess( Comunicator *com );
-	size_t GetRankLeaf( size_t *keys );
-	void CopyKeys( int position , size_t *dest , size_t *source );
-	bool DoesExistCellWithKey( size_t *test_key , OctreeCell_vector leaves );
-	bool CompareKeys( size_t *current_key , size_t *test_key );
-	void GetParentKey( size_t *current_key , char current_level );
-	int GetChildId( size_t *keys , char level );
-	size_t GetNLeavesInsideKeyAndSize( size_t *keys , char level , OctreeCell_vector& all_leaves );
-	void GetAllKeysAndLevelsFromLeaves( size_t *keys , char *level , OctreeCell_vector leaves );
-	void BalanceLocalCellsBasedOnGhostCells( size_t n_ghost_cells , size_t *ghost_keys , char *ghost_levels , OctreeCell_vector leaves , int my_rank );
-	void GetAndSendCellWhichContainsKey( size_t *aux_key , OctreeCell_vector leaves , int process , Comunicator *com );
-	bool IsCurrentLeafMinimumThanNeighbourLeaf( size_t* current_key , size_t * neighbour_key );
-  key_type GetKeyNormalized( double coord ){
-    return octree_bin->CalcKeyNormalized( coord );
-  }
 };
 
-bool Intersects( double *min_coord , double *max_coord , double *center , double radius  ){
-  double dist = 0.0;
-  for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
-    double edge = center[ i_dim ] - min_coord[ i_dim ];
-    if(  edge < 0.0  ){
-      if(  edge < -radius  ){
-        return false;
-      }else{
-        dist += ( edge * edge );
-      }
-    }else{
-      edge = center[ i_dim ] - max_coord[ i_dim ];;
-      if(  edge > 0.0  ){
-        if(  edge > radius  ){
-          return false; 
-        }else{
-          dist += ( edge * edge );
-        }
-      }
+void AsignIntersectionOnCells( OctreeCell_vector& leaves , std::vector<Node*>& Points ){
+  size_t n_points = Points.size();
+  int* flag = new int [ leaves.size() ];
+  size_t cont = 0;
+  for(  size_t i_leaf = 0  ;  i_leaf < leaves.size()  ;  i_leaf++  ){
+    flag[ i_leaf ] = 0;
+    leaves[ i_leaf ]->SetIntersection( false );
+  }
+  for( size_t i_node = 0  ;  i_node < n_points  ;  i_node++ ){
+    if(  cont == leaves.size()  ){
+      break;
+    }
+    int rank = Points[ i_node ]->_GetRank();
+    if( flag[rank] == 0 ){
+      leaves[ rank ]->SetIntersection( true );
+      flag[ rank ] = 1;
+      cont++;
     }
   }
-  if(  dist <= ( radius * radius )  ){
-    return true;
-  }
-  return false;
+  delete[] flag;
 }
 
-void RunPointSearchOctree( std::string filename , double radius , double *center , int level , int arg , char* argv[] ){
-  //BEGINING PARALLEL REGION
-	Comunicator *com=new Comunicator( arg , argv );
+void CleanLeavesAndPoints( OctreeCell_vector& leaves , std::vector<Node*>& Points ){
+  leaves.clear();
+  size_t total_nodes = Points.size();
+  size_t n_nodes = 1;
+  int actual_rank = Points[ 0 ]->_GetRank();
+  int next_rank;
+  for(  size_t i_node = 1  ;  i_node < total_nodes  ;  i_node++  ){
+    next_rank = Points[ i_node ]->_GetRank();
+    if(  next_rank != actual_rank  ){
+      break;
+    }
+    actual_rank = next_rank;
+    n_nodes++;
+  }
 
+
+  size_t i_point = 0;
+  while(  i_point < ( total_nodes - n_nodes )  ){
+    Points.pop_back();
+    i_point++;
+  }
+}
+
+void RefineCellsIntersected( OctreeCell* local_root , std::vector<Node*>& Points , int level ){
+
+  if( local_root->GetIntersection() ){
+    DataInsideOctreeCell* data_ = new DataInsideOctreeCell;
+    for(  size_t i_node = 0  ;  i_node < Points.size()  ;  i_node++  ){
+      data_->SetNode( Points[ i_node ] );
+    }
+    DataInsideOctreeCell** data_cell = local_root->pGetDataPointer();
+    (*data_cell) = data_;  
+
+    int i_level = 0;
+    while( i_level < level ){
+      OctreeCell_vector leaves;
+      i_level++;
+      //OBTAINING ALL LEAVES
+      OctreeCell_vector cells_stack;
+      cells_stack.push_back( local_root );
+      while( !cells_stack.empty() ){
+        OctreeCell* cell = cells_stack.back();
+        cells_stack.pop_back();
+        if( cell->HasChildren() ){
+          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
+            cells_stack.push_back( cell->pGetChild( i_child ) );
+          }
+        }else{
+          leaves.push_back( cell );
+        }
+      }
+		  OctreeCell* leaf;
+		  size_t n_leaves = leaves.size();
+		  for(  size_t i_leaf = 0  ;  i_leaf < n_leaves  ;  i_leaf++  ){
+			  leaf = leaves[ i_leaf ];
+			  if( leaf->GetIntersection() ){
+				  leaf->SubdivideCell(  );
+          DataInsideOctreeCell** data_children = new DataInsideOctreeCell*[ 8 ];
+          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
+            data_children[ i_child ] = new DataInsideOctreeCell;
+            OctreeCell* child = leaf->pGetChild( i_child );
+            DataInsideOctreeCell** data_child = child->pGetDataPointer();
+            (*data_child) = data_children[ i_child ]; 
+          }
+
+          //ASSIGNING DATA TO CHILDS
+          DataInsideOctreeCell* data_leaf = leaf->pGetData();
+          size_t n_nodes = data_leaf->_GetNNodes();
+          for(  size_t i_node = 0  ;  i_node < n_nodes  ;  i_node++  ){
+            key_type keys[ 3 ];
+            Node* node = data_leaf->GetNode( i_node ); 
+            keys[ 0 ] = node->_GetKey( 0 );
+            keys[ 1 ] = node->_GetKey( 1 );
+            keys[ 2 ] = node->_GetKey( 2 ); 
+            size_t index = leaf->GetChildIndex(  keys[ 0 ] , keys[ 1 ] , keys[ 2 ]  );
+            data_children[ index ]->SetNode( node );
+          }
+          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
+            OctreeCell* child = leaf->pGetChild( i_child );
+            if(  data_children[ i_child ]->_GetNNodes()  ){
+              child->SetIntersection( true );
+            }else{
+              child->SetIntersection( false );
+            }
+          }
+			  }
+		  }
+		  leaves.clear();
+    }
+  }
+}
+
+void RunMultiplePointMPISearchOctree( std::string filename , double radius , int arg , char* argv[] ){
+  
+  //BEGINING MPI PARALLEL REGION
+	Comunicator *com=new Comunicator( arg , argv );
   //THIS IS THE CELL POINTER THAT WILL BE PROCESSED ON EACH MPI PARTITION
   OctreeCell* local_root = NULL;
 
-  if( com->_GetRank() == 0 ){ //THIS IS THE MASTER PROCESS
+  //CALCULATING THE REFINEMENT LEVEL IN THE LOCAL OCTREE, THE CELL SIZE HAVE TO BE THE 
+  //SMALLEST POSSIBLE BUT IT HAVE NOT TO BE LESS THAN THE RADIUS
+  int level = com->_GetLevel();
+  double min_cell_size = 1.0/pow( 2 , level );
+  while( 1 ){
+    double next_size = 1.0/pow( 2 , level+1 );
+    if( next_size <= radius ){
+      break;
+    }else{
+      level++;
+    }
+  }
+  //IN THIS CASE IS SUBSTRACTED THE REFINEMENT THAT WILL BE PERFORMED BY THE MASTER
+  level = level - com->_GetLevel();
 
 
+  if( com->_GetRank() == 0 ){
+
+    //MASTER PROCESS
+    double t0, t1 , t2; 
+    t0 = MPI_Wtime();
+    t1 = MPI_Wtime();
+    t2 = MPI_Wtime() - t0;
+    fprintf(stdout, "[%16lf]-[%16lf]   **MASTER-BEGINNING MULTIPLE POINTS SEARCH\n\n\n", t2 , MPI_Wtime() - t1 );
+    
+    //CREATING OCTREE AND REFINING UNTIL HAVE A CELL FOR EACH MPI PROCESS
+    t1 = MPI_Wtime();
+    double cell_size = 1.0 / pow( 2 , com->_GetLevel() );
 	  OctreeDriver octree_driver;
-    //CELL SIZE CALCULATED TO CREATE CELLS FOR EACH PROCESS
-    int refinement_level = log( (double)com->_GetSize() )/log( 8 );
-    double cell_size = 1.0 / pow( 2 , refinement_level );
 	  octree_driver.RefineWithUniformSizeNormalized( cell_size );
-
-    //READING POINTS POSITION
-    std::vector<Node> Points;
-    Points = ReadPointsInfo( filename , refinement_level );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Refinement             : \n", t2 , MPI_Wtime() - t1 );
 
     //OBTAINING ALL LEAVES
+    t1 = MPI_Wtime();
 	  OctreeCell_vector leaves;
 	  leaves = octree_driver.CalcAllLeavesVector( );
-    
-    //CALCULATING INTERSECTIONS
-    for (  int i_leaf = 0  ;  i_leaf < (int)leaves.size()  ;  i_leaf++  ){
-			OctreeCell* leaf;   
-      leaf = leaves[ i_leaf ];
-			double min_coord[ 3 ];
-			double max_coord[ 3 ];
-			size_t min_key[ 3 ];
-			size_t max_key[ 3 ];
-   	  leaf->GetKey(  6 , max_key  );
-   	  leaf->GetKey(  0 , min_key  );
-      for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
-        min_coord[ i_dim ] = (double)min_key[ i_dim ] / (double)(1<<ROOT_LEVEL);
-        max_coord[ i_dim ] = (double)max_key[ i_dim ] / (double)(1<<ROOT_LEVEL);
-      }
-			leaf->SetIntersection( Intersects( min_coord , max_coord , center , radius  ) );
-		}
+    com->CreateConnectivitiesMatrix( leaves );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Calculating all leaves : \n", t2 , MPI_Wtime() - t1 );
+
+    //READING POINTS INFO
+    t1 = MPI_Wtime();
+    std::vector<Node*> Points;
+    ReadPointsInfo( filename , com->_GetLevel() , Points );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Read points information: \n", t2 , MPI_Wtime() - t1 );
+
+    //DETERMINING LEAVES INTERSECTED BY POINTS
+    t1 = MPI_Wtime();
+    AsignIntersectionOnCells( leaves , Points );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Setting intersections  : \n", t2 , MPI_Wtime() - t1 );
 
     //SENDING LEAVES TO SLAVES
+    t1 = MPI_Wtime();
     local_root = leaves[ 0 ];
     for(  size_t i_leaf = 1 ; i_leaf < leaves.size()  ;  i_leaf++  ){
       com->MasterSendCellToSlave( (int)i_leaf , leaves[ i_leaf ] );
     }
-  
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Sending leaves         : \n", t2 , MPI_Wtime() - t1 );
+
     //SEND POINTS BELONGING TO EACH CELL
-    sort( Points.begin( ), Points.end( ), [ ]( Node& lhs, Node& rhs ){ return lhs._GetRank() < rhs._GetRank(); });
+    t1 = MPI_Wtime();
+    sort( Points.begin( ), Points.end( ), [ ]( Node* lhs, Node* rhs ){ return lhs->_GetRank() < rhs->_GetRank(); });
     for(  size_t i_leaf = 1 ; i_leaf < leaves.size()  ;  i_leaf++  ){
       com->MasterSendNodesToSlave( (int)i_leaf , Points );
     }
-    
-    std::vector<Node> Points_copy;
-    Points_copy.push_back( Points[ 0 ] );
-    int actual_rank = Points[ 0 ]._GetRank();
-    int next_rank;
-    int *begin_indexes = new int [com->_GetSize()];
-    int flag = 1;
-    begin_indexes[ 0 ] = 0;
-    for(  size_t i_node = 1  ;  i_node < Points.size()  ;  i_node++  ){
-      Points_copy.push_back( Points[ i_node ] );
-      next_rank = Points[ i_node ]._GetRank();
-      if(  next_rank != actual_rank  ){
-        begin_indexes[ flag ] = i_node;
-        flag++;
-      }
-      actual_rank = next_rank;
-    }
+    CleanLeavesAndPoints( leaves , Points );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Sending points         : \n", t2 , MPI_Wtime() - t1 );
 
 
-    //RANK MASTER PROCESS LEAF 0 AND POINTS WITH RANK 0 (ERASING EXTRA INFORMATION)
-    int n_nodes = (int)Points.size();
-    int i_point = 0;
-    while(  i_point < ( n_nodes - ( begin_indexes[ 1 ] - begin_indexes[ 0 ] ) )  ){
-      Points.pop_back();
-      i_point++;
-    }
-    leaves.clear();
+    //SUBDIVIDING LOCAL ROOT 
+    t1 = MPI_Wtime(); 
+    RefineCellsIntersected( local_root , Points , level );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Refining octree        : \n", t2 , MPI_Wtime() - t1 );
 
+    //OBTAINING BOUNDARY INFORMATION  
+    t1 = MPI_Wtime();
+    com->AssignBoundaryInformation( local_root );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Setting boundary info  : \n", t2 , MPI_Wtime() - t1 );
 
+    //NEIGHBOURS SEARCH
+    t1 = MPI_Wtime();
+    com->NeighboursSearch( local_root , radius );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Neighbours search      : \n", t2 , MPI_Wtime() - t1 );  
 
-    //SUBDIVIDING CELLS BASED ON INTERSECTION WITH THE SPHERE
-    int i_level = 0;
-    while( i_level < level ){
-      i_level++;
-      //OBTAINING ALL LEAVES
-      OctreeCell_vector cells_stack;
-      cells_stack.push_back( local_root );
-      while( !cells_stack.empty() ){
-        OctreeCell* cell = cells_stack.back();
-        cells_stack.pop_back();
-        if( cell->HasChildren() ){
-          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
-            cells_stack.push_back( cell->pGetChild( i_child ) );
-          }
-        }else{
-          leaves.push_back( cell );
-        }
-      }
-      //SUBDIVIDING UNTIL REFINEMENT LEVEL
-			OctreeCell* leaf;      
-			const int n_leaves = (int)leaves.size();
-			for(  int i_leaf = 0  ;  i_leaf < n_leaves  ;  i_leaf++  ){
-				leaf = leaves[ i_leaf ];
-				if( leaf->GetIntersection() ){
-					leaf->SubdivideCell(  );
-          //CALCULATING THE CHILDS INTERSECTED BY CIRCLE
-          OctreeCell* child;
-          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
-            child = leaf->pGetChild( i_child );
-				    size_t min_key[ 3 ];
-				    size_t max_key[ 3 ];
-				    double max_coord[ 3 ];
-				    double min_coord[ 3 ];
-        	  child->GetKey(  6 , max_key  );
-        	  child->GetKey(  0 , min_key  );
-            for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
-              max_coord[ i_dim ] = (double)max_key[ i_dim ] / (double)(1<<ROOT_LEVEL);
-              min_coord[ i_dim ] = (double)min_key[ i_dim ] / (double)(1<<ROOT_LEVEL);
-            }
-      			child->SetIntersection( Intersects( min_coord , max_coord , center , radius  ) );
-          }
-				}
-			}
-			leaves.clear();
-    }
+    //PRINTING TOTAL TIME
+    fprintf(stdout, "                                        **_______________________:\n");
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]                      **TOTAL TIME             : \n", t2 );
+  }else{
+    //SLAVES
+    std::vector<Node*> Points;
 
-    //OBTAINING ALL LEAVES AND THE NODES THAT INTERSECTS THE SPHERE
-    std::vector<int> indexes;
-    for(  size_t i_node = 0  ;  i_node < Points.size()  ;  i_node++  ){
-      key_type keys[ 3 ];
-      for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  )
-        keys[ i_dim ] = Points[ i_node ]._GetKey( i_dim );
-
-      OctreeCell* cell = local_root;
-      for(  size_t i = 0; i < (ROOT_LEVEL-1) ; i++  ){
-        if( cell->IsLeaf() ) {
-          break;
-        }
-        cell = cell->pGetChild( keys[ 0 ] , keys[ 1 ] , keys[ 2 ] );
-      }
-      if(  cell->GetIntersection()  ){
-
-        double dist = 0.0;
-        for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  )
-          dist += pow( Points[ i_node ]._GetCoord( i_dim ) - center[ i_dim ] , 2 );  
-        
-        dist = pow( dist , 0.5 );
-        if(  dist <= radius  ){
-          indexes.push_back( (int)i_node );
-        }
-      }
-    }
-    std::cout<<"Master encontro: "<<indexes.size()<<std::endl;
-    delete[] begin_indexes;
-  }else{//SLAVES
-
-    std::vector<Node> Points;
-    //RECEIVING PROCCESS INFO
+    //RECEIVING INFORMATION FROM MASTER
     local_root=com->SlaveReceiveCellFromMaster( );
-    Points = com->SlaveReceiveNodesFromMaster( );
+    com->SlaveReceiveNodesFromMaster( Points );
 
-    //SUBDIVIDING AND CALCULATING INTERSECTIONS
-    OctreeCell_vector leaves;
-    int i_level = 0;
-    while( i_level < level ){
-      i_level++;
-      //OBTAINING ALL LEAVES
-      OctreeCell_vector cells_stack;
-      cells_stack.push_back( local_root );
-      while( !cells_stack.empty() ){
-        OctreeCell* cell = cells_stack.back();
-        cells_stack.pop_back();
-        if( cell->HasChildren() ){
-          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
-            cells_stack.push_back( cell->pGetChild( i_child ) );
-          }
-        }else{
-          leaves.push_back( cell );
-        }
-      }
+    //SUBDIVIDING LOCAL ROOT
+    RefineCellsIntersected( local_root , Points , level );
 
-      //SUBDIVIDING UNTIL REFINEMENT LEVEL
-			OctreeCell* leaf;      
-			const int n_leaves = (int)leaves.size();
-			for (  int i_leaf = 0  ;  i_leaf < n_leaves  ;  i_leaf++  ){
-				leaf = leaves[ i_leaf ];
-				if( leaf->GetIntersection() ){
-					leaf->SubdivideCell(  );
-          //CALCULATING THE CHILDS INTERSECTED BY CIRCLE
-          OctreeCell* child;
-          for(  size_t i_child = 0  ;  i_child < 8  ;  i_child++  ){
-            child = leaf->pGetChild( i_child );
-				    size_t min_key[ 3 ];
-				    size_t max_key[ 3 ];
-				    double min_coord[ 3 ];
-				    double max_coord[ 3 ];
-        	  child->GetKey(  0 , min_key  );
-        	  child->GetKey(  6 , max_key  );
-            for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
-              max_coord[ i_dim ] = (double)max_key[ i_dim ] / (double)(1<<ROOT_LEVEL);
-              min_coord[ i_dim ] = (double)min_key[ i_dim ] / (double)(1<<ROOT_LEVEL);
-            }
-      			child->SetIntersection( Intersects( min_coord , max_coord , center , radius ) );
-          }
-				}
-			}
-			leaves.clear();
-    }
-    
-    //OBTAINING ALL LEAVES AND THE NODES THAT INTERSECTS THE SPHERE    
-    std::vector<int> indexes;
-    for(  size_t i_node = 0  ;  i_node < Points.size()  ;  i_node++  ){
-      key_type keys[ 3 ];
-      for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  )
-        keys[ i_dim ] = Points[ i_node ]._GetKey( i_dim );
+    //SETTING BOUNDARY INFORMATION
+    com->AssignBoundaryInformation( local_root );
 
-      OctreeCell* cell = local_root;
-      for(  size_t i = 0; i < (ROOT_LEVEL-1) ; i++  ){
-        if(cell->IsLeaf()) {
-          break;
-        }
-        cell = cell->pGetChild( keys[ 0 ] , keys[ 1 ] , keys[ 2 ] );
-      }
-      if(  cell->GetIntersection()  ){
+    //NEIGHBOURS SEARCH
+    com->NeighboursSearch( local_root , radius );
 
-        double dist = 0.0;
-        for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  )
-          dist += pow( Points[ i_node ]._GetCoord( i_dim ) - center[ i_dim ] , 2 );  
-        
-        dist = pow( dist , 0.5 );
-        if(  dist <= radius  ){
-          indexes.push_back( (int)i_node );
-        }
-      }
-    }
-    std::cout<<com->_GetRank()<<" Esclavo encontro: "<<indexes.size()<<std::endl;
   }
 	MPI_Finalize();
 }

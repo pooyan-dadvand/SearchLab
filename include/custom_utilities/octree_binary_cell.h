@@ -154,6 +154,10 @@ namespace Kratos {
             return (((x_key & level_bit) >> next_level) + (((y_key & level_bit) >> next_level) << 1) + (((z_key & level_bit) >> next_level) << 2));
         }
 
+        void SetIntersection(bool value) {
+          intersection_ = value;
+        }
+
         int SubdivideCell() {
             if (level_ == 0)
                 return 1;
@@ -380,9 +384,6 @@ namespace Kratos {
             return level_;
         }
 
-        void SetIntersection(bool value) {
-          intersection_ = value;
-        }
 
         bool GetIntersection() {
           return intersection_;

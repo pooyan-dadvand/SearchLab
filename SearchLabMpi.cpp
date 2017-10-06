@@ -24,7 +24,6 @@
 
 //Octree includes
 #include "custom_utilities/octree_driver.h"
-#include "custom_utilities/octree_binary_cell.h"
 
 int RunPointSearchComparison(std::string Filename, double Radius) {
 
@@ -164,11 +163,8 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 
 int main(int arg, char* argv[]) {
 
-  double center[ 3 ] = {0.5,0.5,0.5};
-	double radius = 1.5;
-  int level = 12;
+	double radius = 0.01;
   
-
   //TESTS WITH OCTREE DRIVER
 	std::string filename;
 	  if (arg > 1) {
@@ -179,12 +175,15 @@ int main(int arg, char* argv[]) {
 		  }
     return 0;
   }
+  //filename = "../cases/modifiedgenericCube2x2x2.500000.pts";
   //filename = "../cases/genericCube2x2x2.500000.pts";
 	//filename = "../cases/genericCube10x10x10.55556.pts";
 	//filename = "../cases/genericCube100x100x100.5051.pts";
 	//filename = "../cases/line100000.5.pts";
-	filename = "../cases/offsetCube79x79x79.1603.pts";
-  RunPointSearchOctree( filename , radius , center , level , arg , argv );
+	//filename = "../cases/offsetCube79x79x79.1603.pts";
+	filename = "../cases/randomCube2000000.pts";
+  RunMultiplePointMPISearchOctree( filename , radius , arg , argv );
+
 
 	return 0;
 }

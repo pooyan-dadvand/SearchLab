@@ -145,21 +145,21 @@ int DoesOverLapTriBox(double boxcenter[3],double boxhalfsize[3],double triverts[
    SUB(e2,v0,v2);      /* tri edge 2 */
    /* Bullet 3:  */
    /*  test the 9 tests first (this was faster) */
-   fex = fabsf(e0[X]);
-   fey = fabsf(e0[Y]);
-   fez = fabsf(e0[Z]);
+   fex = fabs(e0[X]);
+   fey = fabs(e0[Y]);
+   fez = fabs(e0[Z]);
    AXISTEST_X01(e0[Z], e0[Y], fez, fey);
    AXISTEST_Y02(e0[Z], e0[X], fez, fex);
    AXISTEST_Z12(e0[Y], e0[X], fey, fex);
-   fex = fabsf(e1[X]);
-   fey = fabsf(e1[Y]);
-   fez = fabsf(e1[Z]);
+   fex = fabs(e1[X]);
+   fey = fabs(e1[Y]);
+   fez = fabs(e1[Z]);
    AXISTEST_X01(e1[Z], e1[Y], fez, fey);
    AXISTEST_Y02(e1[Z], e1[X], fez, fex);
    AXISTEST_Z0(e1[Y], e1[X], fey, fex);
-   fex = fabsf(e2[X]);
-   fey = fabsf(e2[Y]);
-   fez = fabsf(e2[Z]);
+   fex = fabs(e2[X]);
+   fey = fabs(e2[Y]);
+   fez = fabs(e2[Z]);
    AXISTEST_X2(e2[Z], e2[Y], fez, fey);
    AXISTEST_Y1(e2[Z], e2[X], fez, fex);
    AXISTEST_Z12(e2[Y], e2[X], fey, fex);
@@ -190,4 +190,41 @@ int DoesOverLapTriBox(double boxcenter[3],double boxhalfsize[3],double triverts[
    return 1;   /* box and triangle overlaps */
 
 }
+
+double Distance( double* P1 , double *P2 ){
+  double dist = 0.0;
+  for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++   ){
+    dist += pow( P1[ i_dim ] - P2[ i_dim ] , 2 );
+  }
+  dist = pow( dist , 0.5 );
+  return dist;
+}
+
+bool SphereIntersectsCell(  double *min_coord , double *max_coord , double *center , double radius  ){
+  double dist = 0.0;
+  for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
+    double edge = center[ i_dim ] - min_coord[ i_dim ];
+    if(  edge < 0.0  ){
+      if(  edge < -radius  ){
+        return false;
+      }else{
+        dist += ( edge * edge );
+      }
+    }else{
+      edge = center[ i_dim ] - max_coord[ i_dim ];;
+      if(  edge > 0.0  ){
+        if(  edge > radius  ){
+          return false; 
+        }else{
+          dist += ( edge * edge );
+        }
+      }
+    }
+  }
+  if(  dist <= ( radius * radius )  ){
+    return true;
+  }
+  return false;
+}
+
 #endif // FUNCIONES_H_INCLUDED
