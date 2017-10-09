@@ -93,8 +93,6 @@ public:
 
     std::size_t NumberOfObjects = ObjectsEnd - ObjectsBegin;
 
-    double t0, t1, ti;
-
     // Not sure what happens here if a partition ends up having 0 points/objects/elements
     assert(NumberOfObjects > 0);
 
@@ -115,36 +113,15 @@ public:
     MPI_Status * recvStat = new MPI_Status[mpi_size];
 
     // Calculate the remote partitions where we need to search for each point and execute the transfer in background
-    mPartitionBins->cleanDebugStorage();
-    t0 = GetCurrentTime();
     SearchPartitions(ObjectsBegin, NumberOfObjects, Radius, SendObjects, SendRadius, SentObjectsIds);
-    t1 = GetCurrentTime();
-    mPartitionBins->printDebugStorage();
-
-    printMaxTime(t0, t1, mpi_rank, mpi_size, "Partition search time");
-
-    t0 = GetCurrentTime();
     SendTransferPoints(SendObjects, sendReq, recvReq);
-    t1 = GetCurrentTime();
-
-    printMaxTime(t0, t1, mpi_rank, mpi_size, "Send spawn time");
-
-    t0 = GetCurrentTime();
     SearchInRadiusLocal(ObjectsBegin, NumberOfObjects, Radius, ResultsArray);
-    t1 = GetCurrentTime();
 
-    printMaxTime(t0, t1, mpi_rank, mpi_size, "Loacal search time");
-
-    t0 = GetCurrentTime();
     // Recv the points after the local search has finished and execute the remote search (all points should be here by now)
     for(int p = 0; p < mpi_size; p++) {
       RecvTransferPoints(RecvObjects, sendReq, recvReq, sendStat, recvStat, p);
     }
-    t1 = GetCurrentTime();
 
-    printMaxTime(t0, t1, mpi_rank, mpi_size, "Recv gather time");
-
-    t0 = GetCurrentTime();
     for(int p = 0; p < mpi_size; p++) {
       if(p != mpi_rank && RecvObjects[p].size() != 0) {
         auto ObjectsRemoteBeg = RecvObjects[p].begin();
@@ -156,34 +133,22 @@ public:
         SearchInRadiusLocal(ObjectsRemoteBeg, NumberOfRecvObjects, Radius, SendResults[p]);
       }
     }
-    t1 = GetCurrentTime();
 
-    printMaxTime(t0, t1, mpi_rank, mpi_size, "Remote search time");
-    
     // Send the results (global pointers) back to the propper process and merge with the localss
-    t0 = GetCurrentTime();
     TransferResults(SendObjects, SendResults, RecvResults);
-    t1 = GetCurrentTime();
-
-    printMaxTime(t0, t1, mpi_rank, mpi_size, "Transfer res time");
-
-    t0 = GetCurrentTime();
     AssembleResults(SentObjectsIds, ResultsArray, RecvResults);
-    t1 = GetCurrentTime();
 
-    printMaxTime(t0, t1, mpi_rank, mpi_size, "Aseemble results");
-
-    std::size_t accumNumResults = 0;
-    for(std::size_t i = 0; i < NumberOfObjects; i++) {
-      accumNumResults += ResultsArray[i].size();
-      // std::cout << "(" << mpi_rank << ") Point (" << (*(ObjectsBegin + i))[0] << "," << (*(ObjectsBegin + i))[1] << "," << (*(ObjectsBegin + i))[2] << ") results: " << ResultsArray[i].size() << std::endl;
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if(!mpi_rank) {
-      std::cout << "Finish: " << ResultsArray[NumberOfObjects/2].size() << " " << accumNumResults << std::endl;
-    }
+    // std::size_t accumNumResults = 0;
+    // for(std::size_t i = 0; i < NumberOfObjects; i++) {
+    //   accumNumResults += ResultsArray[i].size();
+    //   // std::cout << "(" << mpi_rank << ") Point (" << (*(ObjectsBegin + i))[0] << "," << (*(ObjectsBegin + i))[1] << "," << (*(ObjectsBegin + i))[2] << ") results: " << ResultsArray[i].size() << std::endl;
+    // }
+    //
+    // MPI_Barrier(MPI_COMM_WORLD);
+    //
+    // if(!mpi_rank) {
+    //   std::cout << "Finish: " << ResultsArray[NumberOfObjects/2].size() << " " << accumNumResults << std::endl;
+    // }
 
     delete[] sendReq;
     delete[] recvReq;
