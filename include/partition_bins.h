@@ -176,13 +176,4 @@ private:
       }
     }
   }
-
-  double Distance2(TObjectType const& FirstPoint, TObjectType const& SecondPoint) {
-    double result = double();
-    for (int i = 0; i < Dimension; i++) {
-      auto distance_i = FirstPoint[i] - SecondPoint[i];
-      result += distance_i * distance_i;
-    }
-    return result;
-  }
 };
