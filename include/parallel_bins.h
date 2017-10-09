@@ -517,18 +517,6 @@ private:
     }
   }
 
-  /** Calculates the squared distance.
-   * Calculates the squared distance between two points.
-   */
-  double Distance2(ObjectType const& FirstPoint, ObjectType const& SecondPoint) {
-		double result = double();
-		for (int i = 0; i < Dimension; i++) {
-			auto distance_i = FirstPoint[i] - SecondPoint[i];
-			result += distance_i * distance_i;
-		}
-		return result;
-	}
- 
   /** Mpi related variables
    * Mpi related variables
    * @mpi_rank: id of the current process for the given mpi communicator
