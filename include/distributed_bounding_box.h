@@ -32,27 +32,15 @@ public:
 	}
 
 	void CalculateGlobalBoundingBox() {
-		double * sendMinPoint = new double[Dimension];
-		double * sendMaxPoint = new double[Dimension];
-		double * recvMinPoint = new double[Dimension];
-		double * recvMaxPoint = new double[Dimension];
+		TPointType recvMinPoint;
+		TPointType recvMaxPoint;
 
-		for(std::size_t i = 0; i < Dimension; i++) {
-			sendMinPoint[i] = this->mMinPoint[i];
-			sendMaxPoint[i] = this->mMaxPoint[i];
-		}
-
-		MPI_Allreduce(sendMinPoint, recvMinPoint, 3, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
-		MPI_Allreduce(sendMaxPoint, recvMaxPoint, 3, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+		MPI_Allreduce(&this->mMinPoint[0], &recvMinPoint[0], 3, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+		MPI_Allreduce(&this->mMaxPoint[0], &recvMaxPoint[0], 3, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
 		for(std::size_t i = 0; i < Dimension; i++) {
 			this->mMinPoint[i] = recvMinPoint[i];
 			this->mMaxPoint[i] = recvMaxPoint[i];
 		}
-
-		delete[] sendMinPoint;
-		delete[] sendMaxPoint;
-		delete[] recvMinPoint;
-		delete[] recvMaxPoint;
 	}
 };
