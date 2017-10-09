@@ -23,17 +23,17 @@
 /**
  * Mpi version of the Bins.
  */
-template<class TObjectBins, class TPartitionBins = PartitionBins<typename TObjectBins::ObjectType>>
+template<class TLocalBins, class TPartitionBins = PartitionBins<typename TLocalBins::ObjectType>>
 class ParallelBins {
   static constexpr int Dimension = 3;
 
 public:
 
   // Use the types from the hosted bins
-  using InternalPointType = typename TObjectBins::InternalPointType;
-	using PointerType = typename TObjectBins::PointerType;
-	using ResultType = typename TObjectBins::ResultType;
-  using ObjectType = typename TObjectBins::ObjectType;
+  using InternalPointType = typename TLocalBins::InternalPointType;
+	using PointerType = typename TLocalBins::PointerType;
+	using ResultType = typename TLocalBins::ResultType;
+  using ObjectType = typename TLocalBins::ObjectType;
   using ResultArray = std::vector<ResultType>;
 
   /** Constructor using the objects.
@@ -54,9 +54,9 @@ public:
    * Assignment operator.
    * @param rOther reference object
    */
-  ParallelBins<TObjectBins, TPartitionBins> & operator=(const ParallelBins<TObjectBins, TPartitionBins> & rOther) {
+  ParallelBins<TLocalBins, TPartitionBins> & operator=(const ParallelBins<TLocalBins, TPartitionBins> & rOther) {
     mPartitionBins = rOther.mPartitionBins;
-    mObjectBins = rOther.mObjectBins;
+    mLocalBins = rOther.mLocalBins;
 
     return *this;
   }
@@ -74,7 +74,7 @@ public:
    */
   virtual ~ParallelBins() {
     delete mPartitionBins;
-    delete mObjectBins;
+    delete mLocalBins;
   }
 
   /** Search in radius
@@ -218,7 +218,7 @@ private:
    */
   template<typename TIteratorType>
   void GenerateLocalBins(TIteratorType const& ObjectsBegin, TIteratorType const& ObjectsEnd) {
-    mObjectBins = new TObjectBins(ObjectsBegin, ObjectsEnd);
+    mLocalBins = new TLocalBins(ObjectsBegin, ObjectsEnd);
   }
 
   /**
@@ -316,7 +316,7 @@ private:
     for(std::size_t i = 0; i < NumberOfObjects; i++) {
       auto ObjectItr  = ObjectsBegin + i;
       auto ResultsItr = ResultsBegin + i;
-      mObjectBins->SearchInRadius(*ObjectItr, Radius, *ResultsItr);
+      mLocalBins->SearchInRadius(*ObjectItr, Radius, *ResultsItr);
       // std::cout << "Point:" << " (" << (*ObjectItr)[0] << "," << (*ObjectItr)[1] << "," << (*ObjectItr)[2] << ") " << "Found: " <<  (*ResultsItr).size() << " Results." << std::endl;
     }
   }
@@ -543,7 +543,7 @@ private:
    * @mObjectBin: Stores where the objects of the partition/s associated to this process are located in the space
    */
   TPartitionBins  * mPartitionBins;
-  TObjectBins     * mObjectBins;
+  TLocalBins      * mLocalBins;
   std::size_t       mObjectsSize;
   
   /**
