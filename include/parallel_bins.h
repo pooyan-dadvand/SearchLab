@@ -220,22 +220,12 @@ private:
     // int TotalNumObjects = NumberOfObjects;
     // int GlobalNumObjects = 0;
 
-    double t0, t1, tx, tz;
-    double accum_a = 0.0;
-    double accum_b = 0.0;
-
-    tx = GetCurrentTime();
     for(std::size_t i = 0; i < NumberOfObjects; i++) {
       auto ObjectItr = ObjectsBegin + i;
 
-      t0 = GetCurrentTime();
       std::vector<typename TPartitionBins::ResultType> partitionList;
       mPartitionBins->SearchInRadius(*ObjectItr, Radius, partitionList);
-      t1 = GetCurrentTime();
 
-      accum_a += (t1 - t0);
-
-      t0 = GetCurrentTime();
       for(std::size_t j = 0; j < partitionList.size(); j++) {
         int part = partitionList[j];
         if(part != mpi_rank && part != -1){
@@ -245,14 +235,7 @@ private:
           // TotalToSend++;
         }
       }
-      t1 = GetCurrentTime();
-      accum_b += (t1 - t0);
     }
-    tz = GetCurrentTime();
-
-    printMaxTime(0.0, accum_a, mpi_rank, mpi_size, "Search? ");
-    printMaxTime(0.0, accum_b, mpi_rank, mpi_size, "Arrays? ");
-    printMaxTime(tx, tz, mpi_rank, mpi_size, "Total? ");
 
     // MPI_Allreduce(&TotalToSend, &GlobalToSend, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
     // MPI_Allreduce(&TotalNumObjects, &GlobalNumObjects, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
