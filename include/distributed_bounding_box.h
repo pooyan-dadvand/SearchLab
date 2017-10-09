@@ -18,7 +18,7 @@ public:
 		MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-		ReduceBoundingBox();
+		CalculateGlobalBoundingBox();
 	}
 
 	template<typename TIteratorType>
@@ -28,10 +28,10 @@ public:
 		MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-		ReduceBoundingBox();
+		CalculateGlobalBoundingBox();
 	}
 
-	void ReduceBoundingBox() {
+	void CalculateGlobalBoundingBox() {
 		double * sendMinPoint = new double[Dimension];
 		double * sendMaxPoint = new double[Dimension];
 		double * recvMinPoint = new double[Dimension];
