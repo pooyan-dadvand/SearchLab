@@ -127,28 +127,10 @@ public:
     delete[] recvPartitions;
   }
 
-  // double accum_time, accum_init;
-  // int accum_len;
-  // int accum_res;
-
-  void cleanDebugStorage() {
-    // accum_init = 0.0;
-    // accum_time = 0.0;
-    // accum_len = 0;
-    // accum_res = 0;
-  }
-
-  void printDebugStorage() {
-    // std::cout << "(" << mpi_rank << ") " << accum_init << " " << accum_time << " " << accum_len << " " << accum_res <<std::endl;
-  }
-
   void SearchInRadius(TObjectType const& ThePoint, double Radius, std::vector<ResultType>& rResults) {
     InternalPointType min_point;
     std::array<std::size_t, Dimension> length;
 
-    // double t0, t1;
-
-    // t0 = GetCurrentTime();
     for (int i = 0; i < Dimension; i++) {
       min_point[i] = ThePoint[i] - Radius;
       length[i] = mCells.CalculatePosition(ThePoint[i] + Radius, i) - mCells.CalculatePosition(ThePoint[i] - Radius, i) + 1;
@@ -156,11 +138,7 @@ public:
     auto min_cell = mCells.CalculateCellIndex(min_point);
 
     std::vector<int> usedMask(mpi_size, 0);
-    // t1 = GetCurrentTime();
 
-    // accum_init += (t1 - t0);
-
-    // t0 = GetCurrentTime();
     for (std::size_t i_z = 0; i_z < length[2]; i_z++) {
       auto y_position = min_cell + i_z * mCells.GetNumberOfCells(0) * mCells.GetNumberOfCells(1);
       for (std::size_t i_y = 0; i_y < length[1]; i_y++) {
@@ -178,11 +156,6 @@ public:
         y_position += mCells.GetNumberOfCells(0);
       }
     }
-    // t1 = GetCurrentTime();
-
-    // accum_time += (t1 - t0);
-    // accum_len += (length[2] * length[1]);
-    // accum_res += rResults.size();
   }
 
 private:
