@@ -32,8 +32,8 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
 	// Input data
 	std::cout << std::setprecision(4) << std::fixed;
 
-	Point<3> ** points;
-  Point<3> point;
+	Point ** points;
+  Point point;
   SphereObject<3> object;
 
 	std::ifstream input;
@@ -56,7 +56,7 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
 	int sizeBlock = 2;									// Num of blocks per chunk
 	std::size_t npointstot = npoints;
 
-	points = new Point<3>*[npointstot];
+	points = new Point*[npointstot];
   // std::vector<Entities::PtrObjectType> objects(npointstot);
 
 	std::size_t pid;
@@ -97,7 +97,7 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
 		// 			int index = i + x * npoints + y * sx * npoints + z * sx * sy * npoints;
 
 		int index = i;
-		points[index] = new Point<3>(point);
+		points[index] = new Point(point);
 		points[index]->id = pid;
 		(*points[index])[0] += Idx;
 		(*points[index])[1] += Idy;
@@ -111,9 +111,9 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
 		// }
 	}
 
-	Point<3> min_point(*points[0]);
-	Point<3> max_point(*points[0]);
-	Point<3> mid_point;
+	Point min_point(*points[0]);
+	Point max_point(*points[0]);
+	Point mid_point;
   SphereObject<3> mid_object;
 
 	// min_point.id = 0;
@@ -135,7 +135,7 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
   mid_object.radius = 0.5/npoints;
 
 	// Output data Info
-	Point<3> & search_point = mid_point;
+	Point & search_point = mid_point;
   SphereObject<3> & search_object = mid_object;
 
 	std::size_t numsearch = npointstot;
@@ -156,7 +156,7 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
 	}
 
 	// // Data Setup
-	// Point<3> * allPoints = new Point<3>[numsearch];
+	// Point * allPoints = new Point[numsearch];
   // SphereObject<3> * allSpheres = new SphereObject<3>[numsearch];
 
 	// std::size_t max_results = npoints;
@@ -177,14 +177,14 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
 #endif
 
 	// Point-Based Search Structures
-	std::vector<Point<3>> points_vector;
+	std::vector<Point> points_vector;
 	for (std::size_t i = 0; i < npointstot; i++) {
 		points_vector.push_back(*(points[i]));
 	}
 
   // Point Interfaces
   // - New Interface
-  PointsNew::RunTests<ParallelBins<PointsBins<Point<3>>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
+  PointsNew::RunTests<ParallelBins<PointsBins<Point>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // - Old Interface
 #ifdef USE_KRATOS

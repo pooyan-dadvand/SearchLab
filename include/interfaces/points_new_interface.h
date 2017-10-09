@@ -9,14 +9,14 @@
 namespace PointsNew {
 
 template<class BinsType>
-void RunTests(char const Title[], std::vector<Point<3>> & points_vector, const Point<3> & search_point, double radius, std::size_t numsearch, std::size_t numsearch_nearest) {
+void RunTests(char const Title[], std::vector<Point> & points_vector, const Point & search_point, double radius, std::size_t numsearch, std::size_t numsearch_nearest) {
   double t0 = GetCurrentTime();
   BinsType bins(points_vector.begin(), points_vector.end());
   double t1 = GetCurrentTime();
   std::cout << "Points Bin" << "\t" << t1 - t0 << "\t";
 
-  std::vector<PointsBins<Point<3>>::ResultType> results;
-  PointsBins<Point<3>>::ResultType nearest_point_result;
+  std::vector<PointsBins<Point>::ResultType> results;
+  PointsBins<Point>::ResultType nearest_point_result;
 
   t0 = GetCurrentTime();
   #pragma omp parallel for firstprivate(results)

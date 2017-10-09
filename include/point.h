@@ -2,12 +2,11 @@
 
 #include <iostream>
 
-template< std::size_t dim_type>
 class Point {
 
 public:
 
-	double       coord[dim_type];
+	double       coord[3];
 	std::size_t  id;
 	std::size_t  tag;
 	//int id;
@@ -23,23 +22,23 @@ public:
 
 	double const & operator[](std::size_t i) const { return coord[i]; }
 
-	void operator=(Point<dim_type> const& Other) {
-		for (std::size_t i = 0; i < dim_type; i++)
+	void operator=(Point const& Other) {
+		for (std::size_t i = 0; i < 3; i++)
 			coord[i] = Other.coord[i];
 	}
 
-  Point<dim_type> operator+ (const Point<dim_type>& t) const
+  Point operator+ (const Point& t) const
   {
-    Point<dim_type> ret(*this);
+    Point ret(*this);
     ret[0] += t[0];
     ret[1] += t[1];
     ret[2] += t[2];
     return ret;
   }
 
-  Point<dim_type> operator- (const Point<dim_type>& t) const
+  Point operator- (const Point& t) const
   {
-    Point<dim_type> ret(*this);
+    Point ret(*this);
     ret[0] -= t[0];
     ret[1] -= t[1];
     ret[2] -= t[2];
@@ -51,17 +50,15 @@ public:
 	Point const& Coordinates() const { return *this; }
 };
 
-template< std::size_t dim_type >
-std::ostream & operator<<(std::ostream& rOut, Point<dim_type> & rPoint) {
+std::ostream & operator<<(std::ostream& rOut, Point & rPoint) {
 	rOut << "(" << rPoint.id << ") ";
-	for (std::size_t i = 0; i < dim_type; i++)
+	for (std::size_t i = 0; i < 3; i++)
 		rOut << rPoint[i] << " ";
 	return rOut;
 };
 
-template< std::size_t dim_type >
-std::istream & operator>>(std::istream& rIn, Point<dim_type> & rPoint) {
-	for (std::size_t i = 0; i < dim_type; i++)
+std::istream & operator>>(std::istream& rIn, Point & rPoint) {
+	for (std::size_t i = 0; i < 3; i++)
 		rIn >> rPoint[i];
 
 	return rIn;

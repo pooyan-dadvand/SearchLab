@@ -11,7 +11,7 @@
 namespace PointsNew {
 
 template<class BinsType>
-void RunTests(char const Title[], std::vector<Point<3>> & points_vector, const Point<3> & search_point, double radius, std::size_t numsearch, std::size_t numsearch_nearest) {
+void RunTests(char const Title[], std::vector<Point> & points_vector, const Point & search_point, double radius, std::size_t numsearch, std::size_t numsearch_nearest) {
 
   int mpi_rank, mpi_size;
 
@@ -48,9 +48,9 @@ void RunTests(char const Title[], std::vector<Point<3>> & points_vector, const P
 
   std::cout << t1 - t0 << "\t";
 
-  std::vector<std::vector<PointsBins<Point<3>>::ResultType>> resultsArray(numProcPoints, std::vector<PointsBins<Point<3>>::ResultType>(0));
+  std::vector<std::vector<PointsBins<Point>::ResultType>> resultsArray(numProcPoints, std::vector<PointsBins<Point>::ResultType>(0));
 
-  PointsBins<Point<3>>::ResultType nearest_point_result;
+  PointsBins<Point>::ResultType nearest_point_result;
 
   t0 = GetCurrentTime();
   bins.SearchInRadius(pointsPartBeg, pointsPartEnd, radius, resultsArray);

@@ -27,8 +27,8 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	// Input data
 	std::cout << std::setprecision(4) << std::fixed;
 
-	Point<3> ** points;
-  Point<3> point;
+	Point ** points;
+  Point point;
   SphereObject<3> object;
 
 	std::ifstream input;
@@ -45,7 +45,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 
 	input >> npoints;
 
-	points = new Point<3>*[npoints];
+	points = new Point*[npoints];
   std::vector<Entities::PtrObjectType> objects(npoints);
 
 	std::size_t pid;
@@ -59,7 +59,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
     }
     object.radius = 0.5/npoints;
 
-		points[i] = new Point<3>(point);
+		points[i] = new Point(point);
 		points[i]->id = pid;
 
     objects[i] = new SphereObject<3>(object);
@@ -67,9 +67,9 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
     objects[i]->radius = 0.5/npoints;
 	}
 
-	Point<3> min_point(*points[0]);
-	Point<3> max_point(*points[0]);
-	Point<3> mid_point;
+	Point min_point(*points[0]);
+	Point max_point(*points[0]);
+	Point mid_point;
   SphereObject<3> mid_object;
 
 	min_point.id = 0;
@@ -91,7 +91,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
   mid_object.radius = 0.5/npoints;
 
 	// Output data Info
-	Point<3> & search_point = mid_point;
+	Point & search_point = mid_point;
   SphereObject<3> & search_object = mid_object;
 
 	std::size_t numsearch = 1000000;
@@ -110,7 +110,7 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
 
 	// Data Setup
-	Point<3> * allPoints = new Point<3>[numsearch];
+	Point * allPoints = new Point[numsearch];
   SphereObject<3> * allSpheres = new SphereObject<3>[numsearch];
 
 	std::size_t max_results = npoints;
@@ -128,14 +128,14 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 	Entities::PointIterator p_results = new Entities::PtrPointType[max_results];
 
 	// Point-Based Search Structures
-	std::vector<Point<3>> points_vector;
+	std::vector<Point> points_vector;
 	for (std::size_t i = 0; i < npoints; i++) {
 		points_vector.push_back(*(points[i]));
 	}
 
   // Point Interfaces
   // - New Interface
-  PointsNew::RunTests<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
+  PointsNew::RunTests<PointsBins<Point>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // - Old Interface
 #ifdef USE_KRATOS
