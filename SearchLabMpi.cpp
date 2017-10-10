@@ -182,6 +182,8 @@ int main(int arg, char* argv[]) {
 	//filename = "../cases/line100000.5.pts";
 	//filename = "../cases/offsetCube79x79x79.1603.pts";
 	filename = "../cases/randomCube2000000.pts";
+
+  //Calling the multiple point search using an octree
   RunMultiplePointMPISearchOctree( filename , radius , arg , argv );
 
 

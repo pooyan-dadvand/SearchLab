@@ -191,6 +191,15 @@ int DoesOverLapTriBox(double boxcenter[3],double boxhalfsize[3],double triverts[
 
 }
 
+/**
+ *Distance between two points
+ *
+ *Distance between two points
+ *
+ *@param[in] P1 Is one of the points to use in the distance
+ *@param[in] P2 Is one of the points to use in the distance
+ *@return A double value that indicates the distance between both points.
+ */
 double Distance( double* P1 , double *P2 ){
   double dist = 0.0;
   for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++   ){
@@ -200,6 +209,17 @@ double Distance( double* P1 , double *P2 ){
   return dist;
 }
 
+/**
+ *Sphere intersects cell
+ *
+ *This functions calculates if a sphere intersects a cell
+ *
+ *@param[in] min_coord Is the lower frontal inferior point of a AABB
+ *@param[in] max_coord Is the upper back superior point of a AABB
+ *@param[in] center Is the center coordinate from the sphere
+ *@param[in] radius Is the radius of the sphere.
+ *@return A bool value indicating if intersection exists or not
+ */
 bool SphereIntersectsCell(  double *min_coord , double *max_coord , double *center , double radius  ){
   double dist = 0.0;
   for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
