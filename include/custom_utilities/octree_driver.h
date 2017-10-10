@@ -158,8 +158,22 @@ public:
    *@param[in] neighbour_coords Is the center of the neighbour non local node.
    */
   void Intersects( double radius , double* neighbour_coords ){
-    if(  Distance( coords , neighbour_coords ) <= radius  ){
-      n_neighbours++;
+    double dist = 0.0;
+    int flag = 1;
+    for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
+      double aux = neighbour_coords[ i_dim ] - coords[ i_dim ];
+      if(  fabs( aux ) > radius  ){
+        flag = 0;
+        break;
+      }else{
+        dist += ( aux * aux );
+      }
+    }
+    if(  flag  ){
+      dist = pow(  dist , 0.5  );
+      if(  dist <= radius  ){
+        n_neighbours++;
+      }
     }
   }
 
@@ -401,7 +415,6 @@ public:
       }
     }
   }
-
 };  
 
 class OctreeConfigure {
@@ -902,6 +915,7 @@ class Comunicator{
           }
         }
       }
+
     }
 
     /**
