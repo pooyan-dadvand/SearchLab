@@ -31,7 +31,8 @@
 
 double GetCurrentTime() {
 #ifndef _OPENMP
-	return std::clock() / static_cast<double>(CLOCKS_PER_SEC);
+  // take car as it wraps after 2147 seconds or 36 minutes http://en.cppreference.com/w/cpp/chrono/c/clock
+  return static_cast<double>(std::clock()) / static_cast<double>(CLOCKS_PER_SEC);
 #else
 	return omp_get_wtime();
 #endif
@@ -103,7 +104,7 @@ void RunTestsOldInterface(char const Title[], IteratorType PBegin, IteratorType 
 	std::cout << t1 - t0 << "\t";
 
 	std::cout << n << "\t" << *PNearestArray[0] << std::endl;
-};
+}
 
 template<class BinsType>
 void RunTestsNewInterface(char const Title[], std::vector<Point<3>> & points_vector, const Point<3> & search_point, double radius, std::size_t numsearch, std::size_t numsearch_nearest) {

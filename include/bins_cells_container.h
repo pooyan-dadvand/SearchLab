@@ -87,9 +87,9 @@ private:
 		}
 
 		for (int i = 0; i < Dimension; i++) {
-			SetNumberOfCells(i, static_cast<std::size_t>(lengths[i] / avarage_length * avarage_number_of_cells) + 1);
+		  SetNumberOfCells(i, static_cast<std::size_t>(lengths[i] / avarage_length * ( double)avarage_number_of_cells) + 1);
 			if (mNumberOfCells[i] > 1)
-				mCellSize[i] = lengths[i] / mNumberOfCells[i];
+			  mCellSize[i] = lengths[i] / ( double)mNumberOfCells[i];
 			else
 				mCellSize[i] = avarage_length;
 

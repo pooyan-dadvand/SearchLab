@@ -2,7 +2,7 @@
 
 double rrandom() {
 	return double(std::rand()) / RAND_MAX;
-};
+}
 
 template< std::size_t dim_type>
 class Point {
@@ -39,7 +39,7 @@ std::ostream & operator<<(std::ostream& rOut, Point<dim_type> & rPoint) {
 	for (std::size_t i = 0; i < dim_type; i++)
 		rOut << rPoint[i] << " ";
 	return rOut;
-};
+}
 
 template< std::size_t dim_type >
 std::istream & operator>>(std::istream& rIn, Point<dim_type> & rPoint) {
@@ -47,4 +47,4 @@ std::istream & operator>>(std::istream& rIn, Point<dim_type> & rPoint) {
 		rIn >> rPoint[i];
 
 	return rIn;
-};
+}
