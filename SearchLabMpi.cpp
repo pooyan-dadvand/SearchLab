@@ -179,14 +179,13 @@ int main(int arg, char* argv[]) {
   //filename = "../cases/genericCube2x2x2.500000.pts";
 	//filename = "../cases/genericCube10x10x10.55556.pts";
 	//filename = "../cases/genericCube100x100x100.5051.pts";
-	//filename = "../cases/line100000.5.pts";
+	filename = "../cases/line100000.5.pts";
 	//filename = "../cases/offsetCube79x79x79.1603.pts";
-	filename = "../cases/randomCube2000000.pts";
+	//filename = "../cases/randomCube2000000.pts";
 
   //Calling the multiple point search using an octree
-  RunMultiplePointMPISearchOctree( filename , radius , arg , argv );
-
-
+  //RunMultiplePointMPISearchOctree( filename , radius , arg , argv );
+  RunMultiplePointMPISearchOctreeTest( filename , radius , arg , argv );
 	return 0;
 }
 

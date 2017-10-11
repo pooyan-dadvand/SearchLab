@@ -179,6 +179,8 @@ public:
 
 };
 
+
+
 /**
  *Read points from file
  *
@@ -915,7 +917,6 @@ class Comunicator{
           }
         }
       }
-
     }
 
     /**
@@ -1257,6 +1258,200 @@ void RefineCellsIntersected( OctreeCell* local_root , std::vector<Node*>& Points
 }
 
 /**
+ *Read points from file
+ *
+ *This function reads the nodes information from file and perform a transformation on the 
+ *points coordinates in order to keep all of them inside the local root cell
+ *
+ *@param[in] rank Is mpi process where the point will be processed
+ *@param[in] root Is the local root cell where the points will be located
+ *@param[in] refinement_level Is the refinement used to generate the cells for each rank 
+ *@param[out] Points This is the vector of pointers to the nodes read from the file.
+ */
+void ReadPoints( int rank , OctreeCell* root , std::string filename , std::vector<Node*>& Points ){
+  double min_point[ 3 ], max_point[ 3 ];
+  root->GetMinPointNormalized( min_point );
+  root->GetMaxPointNormalized( max_point );
+
+  FILE *myfile;
+  //Opening data file
+  const char *name = filename.c_str();
+  myfile = fopen( name , "r" );
+	if(!myfile) {
+		std::cout << "******ERROR: Can not open points file******" << std::endl;
+		exit( 0 );
+	}
+  int n_points , id;
+  double coords[ 3 ];
+  fscanf(myfile,"%d", &n_points);
+  for(  int i_node = 0  ;  i_node < n_points  ;  i_node++  ){
+    fscanf( myfile , "%d" , &id ); //myfile >> id;
+    fscanf( myfile , "%lf" , &coords[0] ); //myfile >> coords[ 0 ];
+    fscanf( myfile , "%lf" , &coords[1] ); //myfile >> coords[ 1 ];
+    fscanf( myfile , "%lf" , &coords[2] ); //myfile >> coords[ 2 ];
+    
+    for(  int i_dim = 0  ;  i_dim < 3  ;  i_dim++  ){
+      coords[ i_dim ] = ( ( max_point[ i_dim ] - min_point[ i_dim ] ) * coords[ i_dim ] ) + min_point[ i_dim ];
+    }
+
+    key_type keys[3];
+    
+    keys[ 0 ] = static_cast<key_type> ( ( 1 << ROOT_LEVEL ) * coords[ 0 ]);
+    keys[ 1 ] = static_cast<key_type> ( ( 1 << ROOT_LEVEL ) * coords[ 1 ]);
+    keys[ 2 ] = static_cast<key_type> ( ( 1 << ROOT_LEVEL ) * coords[ 2 ]);
+
+    Node* aux = new Node( coords[ 0 ] , coords[ 1 ] , coords[ 2 ] , rank , keys[ 0 ] , keys[ 1 ] , keys[ 2 ] );
+    Points.push_back( aux );
+    
+  }
+  fclose(myfile);
+
+}
+
+/**
+ *Search the neighbours inside radius from a cloud of points
+ *
+ *  This function search all the neighbours inside a radius from a set of points. In this 
+ *  function each partition reads the input file and scale the coordinates to the local 
+ *  region
+ *
+ *  @param filename Is the name of the file containing the cloud of points.
+ *  @param radius Is the search radius
+ *  @param arg Is the number of parameters recieved in the program
+ *  @param argv Is the list of params recieved
+ */
+void RunMultiplePointMPISearchOctreeTest( std::string filename , double radius , int arg , char* argv[] ){
+  
+  //Beginning the mpi paralle region
+	Comunicator *com=new Comunicator( arg , argv );
+
+  radius /= pow( (double)com->_GetSize() , 0.3333 );
+
+  //cell pointer used in each cell
+  OctreeCell* local_root = NULL;
+  std::vector<Node*> Points;
+
+  //calculating the maximum refinement level used in the local octree, cell size have to 
+  //be the smallest possible but not smaller than the search radius
+  int level = com->_GetLevel();
+  double min_cell_size = 1.0/pow( 2 , level );
+  while( 1 ){
+    double next_size = 1.0/pow( 2 , level+1 );
+    if( next_size <= radius ){
+      break;
+    }else{
+      level++;
+    }
+  }
+  level = level - com->_GetLevel();
+
+
+  if( com->_GetRank() == 0 ){//This is the master process
+
+    double t0, t1 , t2; 
+    t0 = MPI_Wtime();
+    t1 = MPI_Wtime();
+    t2 = MPI_Wtime() - t0;
+    fprintf(stdout, "[%16lf]-[%16lf]   **MASTER-BEGINNING MULTIPLE POINTS SEARCH\n\n\n", t2 , MPI_Wtime() - t1 );
+    
+    //Creating octree and refine until have a cell for each mpi_process
+    t1 = MPI_Wtime();
+    double cell_size = 1.0 / pow( 2 , com->_GetLevel() );
+	  OctreeDriver octree_driver;
+	  octree_driver.RefineWithUniformSizeNormalized( cell_size );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Refinement             : \n", t2 , MPI_Wtime() - t1 );
+
+    //Obtainig all leaves
+    t1 = MPI_Wtime();
+	  OctreeCell_vector leaves;
+	  leaves = octree_driver.CalcAllLeavesVector( );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Calculating all leaves : \n", t2 , MPI_Wtime() - t1 );
+
+    //Determining leaves intersected by points
+    t1 = MPI_Wtime();
+    for(  size_t i_leaf = 0  ;  i_leaf < leaves.size()  ;  i_leaf++  ){
+      leaves[ i_leaf ]->SetIntersection( true );
+    }
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Setting intersections  : \n", t2 , MPI_Wtime() - t1 );
+
+    //Sending leaves to slaves
+    t1 = MPI_Wtime();
+    local_root = leaves[ 0 ];
+    for(  size_t i_leaf = 1 ; i_leaf < leaves.size()  ;  i_leaf++  ){
+      com->MasterSendCellToSlave( (int)i_leaf , leaves[ i_leaf ] );
+    }
+    leaves.clear();
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Sending leaves         : \n", t2 , MPI_Wtime() - t1 );
+
+    //Reading points information
+    t1 = MPI_Wtime();
+    //ReadPointsInfo( filename , com->_GetLevel() , Points );
+    ReadPoints( com->_GetRank() , local_root , filename , Points );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Read points information: \n", t2 , MPI_Wtime() - t1 );
+
+    /*//Send set of points to each slave
+    t1 = MPI_Wtime();
+    sort( Points.begin( ), Points.end( ), [ ]( Node* lhs, Node* rhs ){ return lhs->_GetRank() < rhs->_GetRank(); });
+    for(  size_t i_leaf = 1 ; i_leaf < leaves.size()  ;  i_leaf++  ){
+      com->MasterSendNodesToSlave( (int)i_leaf , Points );
+    }
+    CleanLeavesAndPoints( leaves , Points );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Sending points         : \n", t2 , MPI_Wtime() - t1 );*/
+
+
+    //subdividing local root, if intersect some points 
+    t1 = MPI_Wtime(); 
+    RefineCellsIntersected( local_root , Points , level );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Refining octree        : \n", t2 , MPI_Wtime() - t1 );
+
+    //Assigning boundary information in each cell
+    t1 = MPI_Wtime();
+    com->AssignBoundaryInformation( local_root );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Setting boundary info  : \n", t2 , MPI_Wtime() - t1 );
+
+    //Searching for neighbours
+    t1 = MPI_Wtime();
+    com->NeighboursSearch( local_root , radius );
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]-[%16lf]   **Neighbours search      : \n", t2 , MPI_Wtime() - t1 );  
+
+    fprintf(stdout, "                                        **_______________________:\n");
+    t2 = MPI_Wtime() - t0;
+		fprintf(stdout, "[%16lf]                      **TOTAL TIME             : \n", t2 );
+
+  }else{ //Slaves
+
+    //Receiving information from master
+    local_root=com->SlaveReceiveCellFromMaster( );
+
+    //Reading points from file
+    ReadPoints( com->_GetRank() , local_root , filename , Points );
+
+    
+    /*com->SlaveReceiveNodesFromMaster( Points );*/
+
+    //Subdividing local root if intersects some points
+    RefineCellsIntersected( local_root , Points , level );
+
+    //Adding boundary information in each cell
+    com->AssignBoundaryInformation( local_root );
+
+    //Searching for neighbours
+    com->NeighboursSearch( local_root , radius );
+  }
+  com->_Synchronize();
+	MPI_Finalize();
+}
+
+/**
  *Search the neighbours inside radius from a cloud of points
  *
  *  This function search all the neighbours inside a radius from a set of points.
@@ -1266,7 +1461,6 @@ void RefineCellsIntersected( OctreeCell* local_root , std::vector<Node*>& Points
  *  @param arg Is the number of parameters recieved in the program
  *  @param argv Is the list of params recieved
  */
-
 void RunMultiplePointMPISearchOctree( std::string filename , double radius , int arg , char* argv[] ){
   
   //Beginning the mpi paralle region
@@ -1274,6 +1468,7 @@ void RunMultiplePointMPISearchOctree( std::string filename , double radius , int
 
   //cell pointer used in each cell
   OctreeCell* local_root = NULL;
+  std::vector<Node*> Points;
 
   //calculating the maximum refinement level used in the local octree, cell size have to 
   //be the smallest possible but not smaller than the search radius
@@ -1315,7 +1510,6 @@ void RunMultiplePointMPISearchOctree( std::string filename , double radius , int
 
     //Reading points information
     t1 = MPI_Wtime();
-    std::vector<Node*> Points;
     ReadPointsInfo( filename , com->_GetLevel() , Points );
     t2 = MPI_Wtime() - t0;
 		fprintf(stdout, "[%16lf]-[%16lf]   **Read points information: \n", t2 , MPI_Wtime() - t1 );
@@ -1345,7 +1539,6 @@ void RunMultiplePointMPISearchOctree( std::string filename , double radius , int
     t2 = MPI_Wtime() - t0;
 		fprintf(stdout, "[%16lf]-[%16lf]   **Sending points         : \n", t2 , MPI_Wtime() - t1 );
 
-
     //subdividing local root, if intersect some points 
     t1 = MPI_Wtime(); 
     RefineCellsIntersected( local_root , Points , level );
@@ -1369,12 +1562,11 @@ void RunMultiplePointMPISearchOctree( std::string filename , double radius , int
 		fprintf(stdout, "[%16lf]                      **TOTAL TIME             : \n", t2 );
 
   }else{ //Slaves
-    
-
-    std::vector<Node*> Points;
 
     //Receiving information from master
     local_root=com->SlaveReceiveCellFromMaster( );
+
+    //Receiving nodes from master
     com->SlaveReceiveNodesFromMaster( Points );
 
     //Subdividing local root if intersects some points
@@ -1385,11 +1577,9 @@ void RunMultiplePointMPISearchOctree( std::string filename , double radius , int
 
     //Searching for neighbours
     com->NeighboursSearch( local_root , radius );
-
   }
 	MPI_Finalize();
 }
-
 
 
 
