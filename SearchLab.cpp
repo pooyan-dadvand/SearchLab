@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <win_missing.h>
 
 #ifdef USE_KRATOS
 // Ugly fixes

@@ -127,17 +127,25 @@ public:
 	  
 	  std::size_t numUsedCells = 0;
 	  std::size_t lastOffset = 0;
+          std::size_t totNumPoints = 0;
+          std::size_t minNumPoints = mCells.GetTotalNumberOfCells();
+          std::size_t maxNumPoints = 0;
 	  for ( std::size_t idx = 1; idx < mCells.GetTotalNumberOfCells(); idx++) {
 	    lastOffset = mCells.GetCellBeginIndex( idx);
 	    std::size_t numberOfPoints = lastOffset - mCells.GetCellBeginIndex( idx - 1);
 	    if ( numberOfPoints != 0) {
 	      numUsedCells++;
+              totNumPoints += numberOfPoints;
+              minNumPoints = ( numberOfPoints < minNumPoints) ? numberOfPoints : minNumPoints;
+              maxNumPoints = ( numberOfPoints > maxNumPoints) ? numberOfPoints : maxNumPoints;
 	    }
 	  }
 	  // last one
 	  std::size_t numberOfPoints = mNumberOfPoints - lastOffset;
 	  if ( numberOfPoints != 0) {
 	    numUsedCells++;
+            minNumPoints = ( numberOfPoints < minNumPoints) ? numberOfPoints : minNumPoints;
+            maxNumPoints = ( numberOfPoints > maxNumPoints) ? numberOfPoints : maxNumPoints;
 	  }
 	  double occupancy_percent = ( 100.0 * ( ( double)numUsedCells / ( double)mCells.GetTotalNumberOfCells()));
 	  std::cout << " with " << numUsedCells << " used cells = "
@@ -145,6 +153,9 @@ public:
 	  double bins_cells_array_size_MB = ( double)( mCells.GetTotalNumberOfCells() * sizeof( std::size_t)) / ( 1024.0 * 1024.0);
 	  std::cout << " Bins size cell array = " << bins_cells_array_size_MB << " MB, used = "
 		    << bins_cells_array_size_MB * occupancy_percent / 100.0 << " MB" << std::endl;
+          std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints
+                    << ", " << ( double)totNumPoints / ( double)( numUsedCells)
+                    << ", " << maxNumPoints << ")" << std::endl;
 	}
 
 private:

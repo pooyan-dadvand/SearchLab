@@ -62,7 +62,7 @@ public:
 	template <typename TPointType>
 	std::size_t CalculateCellIndex(TPointType const& ThePoint) const {
 		std::size_t result = 0;
-		for (std::size_t i_dim = Dimension - 1; i_dim > 0; i_dim--)
+		for ( int i_dim = Dimension - 1; i_dim > 0; i_dim--)
 		{
 			result += CalculatePosition(ThePoint[i_dim], i_dim);
 			result *= mNumberOfCells[i_dim - 1];
@@ -75,7 +75,7 @@ public:
 	std::size_t CalculatePosition(double Coordinate, int ThisDimension) const {
 		auto distance = Coordinate - mBoundingBox.GetMinPoint()[ThisDimension];
 		distance = (distance < 0.00) ? 0.00 : distance;
-		std:size_t position = static_cast<std::size_t>(distance * mInverseOfCellSize[ThisDimension]);
+		std::size_t position = static_cast<std::size_t>(distance * mInverseOfCellSize[ThisDimension]);
 		return (position > mNumberOfCells[ThisDimension] - 1) ? mNumberOfCells[ThisDimension] - 1 : position;
 	}
 
