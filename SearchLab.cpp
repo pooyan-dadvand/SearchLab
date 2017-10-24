@@ -9,6 +9,9 @@
 	// Ugly fixes
 	#include <assert.h>
 	#define KRATOS_ERROR std::cout
+
+	#include "interfaces/points_old_interface.h"
+	#include "interfaces/objects_old_interface.h"
 #endif
 
 // Containers
@@ -162,20 +165,27 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
 int main(int arg, char* argv[]) {
 	std::string filename;
 
+	// Default filename
+	filename = "../cases/genericCube2x2x2.500000.pts";
+	// filename = "../cases/genericCube100x100x100.5051.pts";
+	// filename = "../cases/randomCube2000000.pts";
+
+	// Default radius
 	double radius = 0.0102;
 
 	if (arg > 1) {
-		std::cout << "Argument not founded " << std::endl;
-		filename = argv[1];
-
-		if (arg == 3) {
-			radius = atof(argv[2]) / 1000000;
-		}
-
-		return 0;
+	  if ( !strncasecmp( argv[ 1], "-h", 2) || !strncasecmp( argv[ 1], "--h", 2)) {
+	    std::cout << "Usage: " << argv[ 0] << " [ filename [ radius ] ]" << std::endl;
+	    std::cout << "       filename default value = " << filename << std::endl;
+	    std::cout << "       radius default value   = " << radius << std::endl;
+	    return 0;
+	  }
+	  filename = argv[1];
+	  if (arg == 3) {
+	    radius = atof(argv[2]) / 1000000;
+	  }
 	}
-
-	filename = "../cases/genericCube100x100x100.5051.pts";
+	
 	RunPointSearchComparison(filename, radius);
 	
 	// filename = "../cases/offsetCube79x79x79.1603.pts";
