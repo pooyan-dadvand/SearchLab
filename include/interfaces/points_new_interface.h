@@ -13,6 +13,8 @@ void RunTests(char const Title[], std::vector<Point> & points_vector, const Poin
   double t0 = GetCurrentTime();
   BinsType bins(points_vector.begin(), points_vector.end());
   double t1 = GetCurrentTime();
+
+  bins.PrintStatistics();
   std::cout << "Points Bin" << "\t" << t1 - t0 << "\t";
 
   std::vector<PointsBins<Point>::ResultType> results;

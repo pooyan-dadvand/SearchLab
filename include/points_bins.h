@@ -1,9 +1,12 @@
+/* -*- c++ -*- */
 #pragma once
 
 #include <array>	
 #include <vector>
 #include <limits>
 #include <cmath>
+
+#include <iostream>
 
 #include "bins_cells_container.h"
 #include "spatial_search_result.h"
@@ -105,6 +108,44 @@ public:
 		return current_result;
 	}
 
+	void PrintStatistics() const {
+	  // Bins statistics
+	  std::cout << "Bin of ";
+	  std::size_t numberOfCells = 1;
+	  for ( std::size_t i = 0; i < Dimension; i++) {
+	    numberOfCells *= mCells.GetNumberOfCells( i);
+	    std::cout << mCells.GetNumberOfCells( i);
+	    if ( i < Dimension - 1)
+	      std::cout << " x ";
+	  }
+	  std::cout << " = " << numberOfCells << " cells" << std::endl;
+	  std::cout << " = " << mCells.GetTotalNumberOfCells() << " cells" << std::endl;
+
+	  // for ( std::size_t idx = 0; idx < Dimension; idx++) {
+	  //   std::cout << " Cell size in axis = " << idx << " is " << mCells.GetCellSize( idx) << std::endl;
+	  // }
+	  
+	  std::size_t numUsedCells = 0;
+	  std::size_t lastOffset = 0;
+	  for ( std::size_t idx = 1; idx < mCells.GetTotalNumberOfCells(); idx++) {
+	    lastOffset = mCells.GetCellBeginIndex( idx);
+	    std::size_t numberOfPoints = lastOffset - mCells.GetCellBeginIndex( idx - 1);
+	    if ( numberOfPoints != 0) {
+	      numUsedCells++;
+	    }
+	  }
+	  // last one
+	  std::size_t numberOfPoints = mNumberOfPoints - lastOffset;
+	  if ( numberOfPoints != 0) {
+	    numUsedCells++;
+	  }
+	  double occupancy_percent = ( 100.0 * ( ( double)numUsedCells / ( double)mCells.GetTotalNumberOfCells()));
+	  std::cout << " with " << numUsedCells << " used cells = "
+		    << occupancy_percent << " % occupancy" << std::endl;
+	  double bins_cells_array_size_MB = ( double)( mCells.GetTotalNumberOfCells() * sizeof( std::size_t)) / ( 1024.0 * 1024.0);
+	  std::cout << " Bins size cell array = " << bins_cells_array_size_MB << " MB, used = "
+		    << bins_cells_array_size_MB * occupancy_percent / 100.0 << " MB" << std::endl;
+	}
 
 private:
 	std::size_t mNumberOfPoints;
