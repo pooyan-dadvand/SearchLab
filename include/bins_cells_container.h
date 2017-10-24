@@ -51,16 +51,16 @@ public:
 		return mCellsBeginIndices.size();
 	}
 
-	double GetCellSize(std::size_t Axis) {
+	double GetCellSize(std::size_t Axis) const {
 		return mCellSize[Axis];
 	}
 
-	std::size_t GetCellBeginIndex(std::size_t Index) {
+	std::size_t GetCellBeginIndex(std::size_t Index) const {
 		return mCellsBeginIndices[Index];
 	}
 
 	template <typename TPointType>
-	std::size_t CalculateCellIndex(TPointType const& ThePoint) {
+	std::size_t CalculateCellIndex(TPointType const& ThePoint) const {
 		std::size_t result = 0;
 		for (std::size_t i_dim = Dimension - 1; i_dim > 0; i_dim--)
 		{
@@ -72,7 +72,7 @@ public:
 	}
 
 
-	std::size_t CalculatePosition(double Coordinate, int ThisDimension) {
+	std::size_t CalculatePosition(double Coordinate, int ThisDimension) const {
 		auto distance = Coordinate - mBoundingBox.GetMinPoint()[ThisDimension];
 		distance = (distance < 0.00) ? 0.00 : distance;
 		std:size_t position = static_cast<std::size_t>(distance * mInverseOfCellSize[ThisDimension]);
