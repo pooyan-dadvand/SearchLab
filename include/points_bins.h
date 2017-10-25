@@ -10,6 +10,7 @@
 
 #include "bins_cells_container.h"
 #include "spatial_search_result.h"
+#include "interval_count.h"
 
 template <typename TObjectType>
 class PointsBins {
@@ -110,6 +111,7 @@ public:
 
 	void PrintStatistics() const {
 	  // Bins statistics
+	  std::cout << "=== Bins statistics === \n";
 	  std::cout << "Bin of ";
 	  std::size_t numberOfCells = 1;
 	  for ( std::size_t i = 0; i < Dimension; i++) {
@@ -130,6 +132,7 @@ public:
           std::size_t totNumPoints = 0;
           std::size_t minNumPoints = mCells.GetTotalNumberOfCells();
           std::size_t maxNumPoints = 0;
+	  std::size_t numCellsWithSinglePoint = 0;
 	  for ( std::size_t idx = 1; idx < mCells.GetTotalNumberOfCells(); idx++) {
 	    lastOffset = mCells.GetCellBeginIndex( idx);
 	    std::size_t numberOfPoints = lastOffset - mCells.GetCellBeginIndex( idx - 1);
@@ -138,6 +141,8 @@ public:
               totNumPoints += numberOfPoints;
               minNumPoints = ( numberOfPoints < minNumPoints) ? numberOfPoints : minNumPoints;
               maxNumPoints = ( numberOfPoints > maxNumPoints) ? numberOfPoints : maxNumPoints;
+	      if ( numberOfPoints == 1)
+		numCellsWithSinglePoint++;
 	    }
 	  }
 	  // last one
@@ -156,6 +161,18 @@ public:
           std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints
                     << ", " << ( double)totNumPoints / ( double)( numUsedCells)
                     << ", " << maxNumPoints << ")" << std::endl;
+
+	  std::cout << "Number of cells with only one point = " << numCellsWithSinglePoint << std::endl;
+	  IntervalCount ic( 8, ( double)minNumPoints, ( double)maxNumPoints);
+	  for ( std::size_t idx = 1; idx < mCells.GetTotalNumberOfCells(); idx++) {
+	    lastOffset = mCells.GetCellBeginIndex( idx);
+	    std::size_t numberOfPoints = lastOffset - mCells.GetCellBeginIndex( idx - 1);
+	    if ( numberOfPoints != 0) {
+	      ic.countSample( ( double)numberOfPoints);
+	    }
+	  }
+	  ic.print();
+	  std::cout << "=== End of statistics === \n";
 	}
 
 private:
