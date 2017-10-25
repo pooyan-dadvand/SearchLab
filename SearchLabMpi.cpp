@@ -152,7 +152,7 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
 		std::cout << " Number of Repetitions : " << numsearch << std::endl;
 		std::cout << std::endl;
 
-		std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
+		// std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
 	}
 
 	// // Data Setup

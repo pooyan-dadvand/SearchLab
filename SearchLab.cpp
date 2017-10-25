@@ -113,8 +113,6 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   std::cout << " Number of Repetitions : " << numsearch << std::endl;
   std::cout << std::endl;
 
-  std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
-
   // Data Setup
   Point *allPoints = new Point[ numsearch ];
   SphereObject< 3 > *allSpheres = new SphereObject< 3 >[ numsearch ];
