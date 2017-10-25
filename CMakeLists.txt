@@ -10,6 +10,8 @@ check_for_cxx11_compiler(CXX11_COMPILER)
 
 set( USE_MPI OFF CACHE BOOL "Use MPI implementation")
 
+find_package(ZLIB REQUIRED)
+
 if(CXX11_COMPILER)
 # C++11 compiler available
 
@@ -19,6 +21,7 @@ if(CXX11_COMPILER)
   
   include_directories( ${CMAKE_SOURCE_DIR}/include )
   include_directories( ${MPI_INCLUDE_PATH} )
+  include_directories( ${ZLIB_INCLUDE_PATH} )
   
   set_source_files_properties("*.c" PROPERTIES LANGUAGE CXX )
   set_source_files_properties("*.h" PROPERTIES LANGUAGE CXX )
@@ -31,7 +34,7 @@ if(CXX11_COMPILER)
   
   # add the executable
   add_executable(SearchLab.exe SearchLab.cpp)
-  target_link_libraries(SearchLab.exe)
+  target_link_libraries(SearchLab.exe ${ZLIB_LIBRARIES})
 
   # require a C++11 compiler
   # this seems not to work ...

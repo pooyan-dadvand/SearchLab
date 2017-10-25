@@ -15,6 +15,9 @@
 #include "interfaces/objects_old_interface.h"
 #endif
 
+// Support for compressed streams
+#include "zstr.hpp"
+
 // Containers
 #include "containers.h"
 
@@ -30,8 +33,10 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   Point point;
   SphereObject< 3 > object;
 
-  std::ifstream input;
-  input.open( Filename.c_str() );
+  double t0 = GetCurrentTime();
+  // std::ifstream input;
+  // input.open( Filename.c_str() );
+  zstr::ifstream input( Filename.c_str() );
 
   if ( !input ) {
     std::cout << "Cannot open data file" << std::endl;
@@ -70,6 +75,8 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     objects[ i ]->id = pid;
     objects[ i ]->radius = 0.5 / npoints;
   }
+  double t1 = GetCurrentTime();
+  std::cout << "Reading file = " << t1 - t0 << " sec." << std::endl;
 
   Point min_point( *points[ 0 ] );
   Point max_point( *points[ 0 ] );
