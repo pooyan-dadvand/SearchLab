@@ -34,13 +34,18 @@ public:
    * Constructor by Data Pointer
    * @param DataPointer Pointer to the data.
    */
+#ifdef USING_MPI
   GlobalPointer(TDataType * DataPointer, int Rank = 0)
     : mDataPointer(DataPointer)
-#ifdef USING_MPI
     , mRank(Rank)
-#endif
     {
   }
+#else // USING_MPI
+  GlobalPointer( TDataType * DataPointer) // Rank not used
+    : mDataPointer( DataPointer ) 
+  {
+  }
+#endif // USING_MPI
 
 #ifdef USING_BOOST
   /** Constructor by boost::shared_ptr

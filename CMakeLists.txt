@@ -10,6 +10,12 @@ check_for_cxx11_compiler(CXX11_COMPILER)
 
 set( USE_MPI OFF CACHE BOOL "Use MPI implementation")
 
+# for Windows
+if (WIN32)
+  # set( ZLIB_ROOT "C:/GID64-git/libZ/windows")
+  set( ZLIB_ROOT "C:/GID64-git/libZ/zlib-1.2.11")
+endif (WIN32)
+
 find_package(ZLIB REQUIRED)
 
 if(CXX11_COMPILER)
@@ -21,7 +27,7 @@ if(CXX11_COMPILER)
   
   include_directories( ${CMAKE_SOURCE_DIR}/include )
   include_directories( ${MPI_INCLUDE_PATH} )
-  include_directories( ${ZLIB_INCLUDE_PATH} )
+  include_directories( ${ZLIB_INCLUDE_DIRS} )
   
   set_source_files_properties("*.c" PROPERTIES LANGUAGE CXX )
   set_source_files_properties("*.h" PROPERTIES LANGUAGE CXX )

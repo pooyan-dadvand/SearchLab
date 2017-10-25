@@ -135,8 +135,10 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   std::vector< Entities::PtrObjectType > objectResults( max_results );
   std::vector< double > resultDistances( max_results );
 
+#ifdef USE_KRATOS
   double *distances = new double[ npoints ];
   Entities::PointIterator p_results = new Entities::PtrPointType[ max_results ];
+#endif // USE_KRATOS
 
   // Point-Based Search Structures
   std::vector< Point > points_vector;

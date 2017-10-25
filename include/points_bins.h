@@ -65,7 +65,7 @@ public:
 	}
 
 	ResultType SearchNearest(TObjectType const& ThePoint) {
-		auto cell_index = mCells.CalculateCellIndex(ThePoint);
+		// auto cell_index = mCells.CalculateCellIndex(ThePoint);
 		ResultType current_result;
 
 		if (mNumberOfPoints == 0)
