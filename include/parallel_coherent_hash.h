@@ -30,6 +30,8 @@ private:
     for ( size_t i = 0; i < num_random; i++) {
       value = ( value << ( i * size_random_value)) ^ ( t_KeyType)rd();
     }
+    if ( value < 0) // may be t_KeyType is signed, and we want positive offsets
+      value = -value;
     return value;
   } 
   
@@ -56,7 +58,8 @@ private:
     HashEntry() : m_MaximumAge( 0 ), m_KeyAge( 0 ), m_Data() {}
     HashEntry( const t_KeyType &key_in, const TDataType &data_in )
       : m_MaximumAge( 0 ), m_KeyAge( key_in ), m_Data( data_in ) {}
-    HashEntry( HashEntry const &Other ) = default;
+    HashEntry( HashEntry const &he )
+      : m_MaximumAge( he.m_MaximumAge), m_KeyAge( he.m_KeyAge), m_Data( he.m_Data) {}
     HashEntry &operator=( const HashEntry &he) {
       m_MaximumAge = he.m_MaximumAge;
       m_KeyAge = he.m_KeyAge;
@@ -116,10 +119,21 @@ private:
       offset = this->getRandomOffset();
     }
     m_HashOffsets[ 0] = 0; // First offset = 0
+    // for ( size_t i = 0; i < m_HashOffsets.size(); i++) {
+    //   std::cout << "Random offset " << i << " = " << m_HashOffsets[ i] << std::endl;
+    // }
   }
   std::size_t getProperSize( std::size_t num_entries); // returns next "prime" above num_entries/load_factor
   std::size_t getHash( const t_KeyType &key_in, const char age_in) const {
-    return ( std::size_t)( ( key_in + m_HashOffsets[ age_in]) % ( t_KeyType)m_Size);
+    // doing modulus with std::size_t we don't care if t_KeyType is signed and key_in may be < 0
+    return ( std::size_t)( key_in + m_HashOffsets[ age_in]) % m_Size;
+  }
+  std::size_t countUsedEntries() const {
+    std::size_t count = 0;
+    for ( const auto &entry : m_HashTable ) {
+      count += ( entry.getAge() != 0);
+    }
+    return count;
   }
   
 private:
@@ -164,20 +178,21 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::Insert( const t_KeyType
   found_or_inserted_out = false;
   char age = 1;
   HashEntry entry_to_insert( key_in, data_in);
+  // if ( countUsedEntries() > m_Size - 1) {
+  //   std::cout << "ParallelCoherentHash::Insert TABLE FULL inserting key = " << key_in << std::endl;
+  //   std::cout << "ParallelCoherentHash::Insert TABLE of size " << m_Size << " has " << countUsedEntries() << " entries " << std::endl;
+  // }
   while ( age < MAXIMUM_AGE) {
     entry_to_insert.setAge( age);
     std::size_t idx = getHash( entry_to_insert.getKey(), ( char)( age - 1));
     HashEntry old_entry( m_HashTable[ idx]);
-    const char old_entry_age = old_entry.getAge();
-    // const t_KeyType old_entry_key = old_entry.getKey();
-    // get key with max age ( key_to_insert, key_in_table)
-    // This should be atomicMAX
-    if ( entry_to_insert.getAge() > old_entry_age) {
+    // if entry_to_insert is older than stored one, evict it!
+    if ( entry_to_insert.getAge() > old_entry.getAge()) {
       // we want to maintain the maximum age of the entry
       m_HashTable[ idx].copyKeyAgeData( entry_to_insert);
     }
-    if ( entry_to_insert.getAge() > old_entry_age) { // eviction occured
-      // update MaxAge with current age if greated than stored on
+    if ( entry_to_insert.getAge() > old_entry.getAge()) { // eviction occured
+      // update MaxAge with current age if greated than stored on first insert
       std::size_t age0entryIdx = getHash( entry_to_insert.getKey(), 0);
       // atomicMAX
       char old_age0entry = m_HashTable[ age0entryIdx].getMaximumAge();
@@ -187,10 +202,11 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::Insert( const t_KeyType
 	if ( entry_to_insert.getAge() > m_TableMaximumAge)
 	  m_TableMaximumAge = entry_to_insert.getAge();
       }
-      if ( old_entry_age > 0) {
+      if ( old_entry.getAge() > 0) {
 	// evicted cell was not empty, so process evicted key
 	entry_to_insert.copyKeyAgeData( old_entry);
-	age = old_entry_age;
+	age = old_entry.getAge();
+	age++; // next try for evicted element
       } else {
 	// the evicted cell was empty, so quit
 	break;
@@ -201,9 +217,9 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::Insert( const t_KeyType
       age++;
     }
   } // while
-  // if ( age == MAXIMUM_AGE) {
-  //   throw SLexception( "ParallelCoherentHash::Insert couldn't insert key = " + std::to_string( key_in));
-  // }
+  if ( age >= MAXIMUM_AGE) {
+    throw SLexception( "ParallelCoherentHash::Insert couldn't insert key = " + std::to_string( key_in));
+  }
   found_or_inserted_out = ( age != MAXIMUM_AGE);
 } // ParallelCoherentHash::Insert
 
@@ -276,9 +292,15 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::PrintStatistics() const
   std::size_t sizeOffsetTable = m_HashOffsets.size() * sizeof( t_KeyType);
   std::cout << "Total number of elements in hash table = " << m_Size << " = " << sizeHashTable << " bytes" << std::endl;
   std::size_t count = 0;
+  std::cout << "Hash entry XXXX = (  key, data, age)" << std::endl;
+  std::cout.imbue( prev_loc); // restore previous locale, i.e. without thousand separators
   for ( const auto &entry : m_HashTable ) {
     count += ( entry.getAge() != 0);
+    // if ( entry.getAge()) {
+    //   std::cout << "Hash entry " << count << " = ( " << entry.getKey() << ", " << entry.getData() << ", " << ( int)( entry.getAge()) << ")" << std::endl;
+    // }
   }
+  std::cout.imbue( std::locale( "")); // for thousand separators ...
   std::cout << " Used number of elements in hash table = " << count << std::endl;
   std::cout << "Configured load factor = " << LOAD_FACTOR << " vs real load factor = " << ( double)count / ( double)m_Size << std::endl;
   std::cout << "Maximum age = " << ( int)m_TableMaximumAge << std::endl;

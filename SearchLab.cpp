@@ -197,22 +197,21 @@ void testParallelCoherentHash() {
   pch.resize( size_hash, -1);
   for ( int i = 0; i < size_hash; i++) {
     // pch[ i] = i + 1;
-    pch.getDataRef( i) = i + 1;
+    int key = i - 5;
+    pch.getDataRef( key) = i + 1;
   }
   for ( int i = 0; i < size_hash; i++) {
-    // int value = ( *( const ParallelCoherentHash< int, int> *)&pch)[ i]; // this does not insert values calls operator[] const
-    // printf( "id[ %4d] = %d\n", i, value);
-    // printf( "id[ %4d] = %d\n", i, pch[ i]); // always insert values as 'pch' is not const!!! calls operator[]
-    pch.getDataRef( i)++;
-    printf( "id[ %4d] = %d\n", i, pch.getData( i));
+    int key = i - 5;
+    pch.getDataRef( key)++;
+    // printf( "id[ %4d] = %d\n", key, pch.getData( key));
   }
   pch.PrintStatistics();
 }
 
 int main( int arg, char *argv[] ) {
 
-  // testParallelCoherentHash();
-  // return 0;
+  testParallelCoherentHash();
+  return 0;
 
     
   std::string filename;
