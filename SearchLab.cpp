@@ -63,6 +63,10 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     input >> pid;
     input >> point;
 
+    // if( !i || i == npoints - 1) {
+    //   std::cout << "Point " << i + 1 << " = " << pid << " - " << point << std::endl;
+    // }
+
     for ( std::size_t d = 0; d < 3; d++ ) {
       object[ d ] = point[ d ];
     }
