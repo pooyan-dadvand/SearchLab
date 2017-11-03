@@ -179,9 +179,9 @@ public:
     IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
     for ( std::size_t idx = 1; idx < mCells.GetTotalNumberOfCells(); idx++ ) {
       lastOffset = mCells.GetCellBeginIndex( idx );
-      std::size_t numberOfPoints = lastOffset - mCells.GetCellBeginIndex( idx - 1 );
-      if ( numberOfPoints != 0 ) {
-        ic.countSample( ( double )numberOfPoints );
+      std::size_t numberOfPoints2 = lastOffset - mCells.GetCellBeginIndex( idx - 1 );
+      if ( numberOfPoints2 != 0 ) {
+        ic.countSample( ( double )numberOfPoints2 );
       }
     }
     ic.print();
