@@ -33,12 +33,14 @@ if(CXX11_COMPILER)
   set_source_files_properties("*.h" PROPERTIES LANGUAGE CXX )
 
   # Warnings
-  set( WARN_FLAGS "-Wreturn-type -Wswitch -Wformat \
+  if ( CMAKE_COMPILER_IS_GNUCXX)
+    set( WARN_FLAGS "-Wreturn-type -Wswitch -Wformat \
 	-Wcast-align -Wconversion -Wcomment \
 	-Wmissing-braces \
 	-Wno-long-long  -Wno-variadic-macros \
 	-Wno-char-subscripts -pedantic -Wextra -Wall -Wno-ignored-qualifiers")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARN_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARN_FLAGS}")
+    endif ( CMAKE_COMPILER_IS_GNUCXX)
   
   # Kratos
   if(USE_KRATOS MATCHES ON)
