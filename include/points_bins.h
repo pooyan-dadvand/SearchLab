@@ -15,6 +15,7 @@
 
 template < typename TObjectType > class PointsBins {
   static constexpr int Dimension = 3;
+  static constexpr bool USE_STD_VECTOR_IN_BINS = true; // set it to false to use ParallelCoherentHash
 
 public:
   using InternalPointType = std::array< double, Dimension >;
@@ -24,7 +25,7 @@ public:
 
   template < typename TIteratorType >
   PointsBins( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
-      : mCells( PointsBegin, PointsEnd ) {
+    : mCells( PointsBegin, PointsEnd, USE_STD_VECTOR_IN_BINS ) {
     mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
 
     if ( mNumberOfPoints == 0 ) {

@@ -1,7 +1,9 @@
 /* -*- c++ -*- */
 #pragma once
 
+#include <algorithm>
 #include "bounding_box.h"
+#include "parallel_coherent_hash.h"
 
 class BinsCellsContainer {
   static constexpr int Dimension = 3;
@@ -13,15 +15,17 @@ protected:
   InternalPointType mCellSize;
   InternalPointType mInverseOfCellSize;
   std::vector< std::size_t > mCellsBeginIndices;
-
-
+  ParallelCoherentHash< std::size_t, std::size_t> m_PCHCellsBeginIndices;
+  std::size_t m_numCells;
+  bool m_UsingStdVector;
+  
 public:
   template < typename TIteratorType >
-  BinsCellsContainer( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
-    : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ) {
-
+  BinsCellsContainer( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd, bool useStdVectorIn = true )
+    : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ), m_numCells( 0), m_UsingStdVector( useStdVectorIn) {
+    
     std::size_t approximated_number_of_cells = std::distance( PointsBegin, PointsEnd );
-
+    
     if ( approximated_number_of_cells == 0 )
       return;
 
@@ -39,16 +43,22 @@ public:
   }
 
   void SetCellBeginIndex( std::size_t Index, std::size_t Value ) {
-    mCellsBeginIndices[ Index ] = Value;
+    if ( m_UsingStdVector) {
+      mCellsBeginIndices[ Index ] = Value;
+    } else {
+      m_PCHCellsBeginIndices.getDataRef( Index ) = Value;
+    }
   }
 
   std::size_t GetNumberOfCells( std::size_t Axis ) const { return mNumberOfCells[ Axis ]; }
 
-  std::size_t GetTotalNumberOfCells() const { return mCellsBeginIndices.size(); }
+  std::size_t GetTotalNumberOfCells() const { return m_numCells;}//mCellsBeginIndices.size(); }
 
   double GetCellSize( std::size_t Axis ) const { return mCellSize[ Axis ]; }
 
-  std::size_t GetCellBeginIndex( std::size_t Index ) const { return mCellsBeginIndices[ Index ]; }
+  std::size_t GetCellBeginIndex( std::size_t Index ) const { 
+      return m_UsingStdVector ? mCellsBeginIndices[ Index ] : m_PCHCellsBeginIndices.getData( Index);
+  }
 
   template < typename TPointType >
   std::size_t CalculateCellIndex( TPointType const &ThePoint ) const {
@@ -103,14 +113,31 @@ protected:
   template < typename TIteratorType >
   void InitializeCellsBeginIndices( TIteratorType const &PointsBegin,
                                     TIteratorType const &PointsEnd ) {
-    mCellsBeginIndices.resize( mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ] * mNumberOfCells[ 2 ] + 1,
-                               0 );
-    for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
-      mCellsBeginIndices[ CalculateCellIndex( *i_point ) + 1 ]++;
-    }
-
-    for ( std::size_t i_cell_begin = 1; i_cell_begin < mCellsBeginIndices.size(); i_cell_begin++ ) {
-      mCellsBeginIndices[ i_cell_begin ] += mCellsBeginIndices[ i_cell_begin - 1 ];
+    m_numCells = mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ] * mNumberOfCells[ 2 ] + 1;
+    if ( m_UsingStdVector) {
+      mCellsBeginIndices.resize( mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ] * mNumberOfCells[ 2 ] + 1,
+				 0 );
+      for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
+	mCellsBeginIndices[ CalculateCellIndex( *i_point ) + 1 ]++;
+      }
+      
+      for ( std::size_t i_cell_begin = 1; i_cell_begin < mCellsBeginIndices.size(); i_cell_begin++ ) {
+	mCellsBeginIndices[ i_cell_begin ] += mCellsBeginIndices[ i_cell_begin - 1 ];
+      }
+    } else {
+      m_PCHCellsBeginIndices.resize( m_numCells, 0);
+      std::vector< size_t> lstUsedIndices;
+      for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
+	std::size_t idx = CalculateCellIndex( *i_point ) + 1;
+	lstUsedIndices.push_back( idx);
+	m_PCHCellsBeginIndices.getDataRef( idx )++;
+      }
+      std::sort( lstUsedIndices.begin(), lstUsedIndices.end());
+      for ( std::size_t i_cell_begin = 1; i_cell_begin < lstUsedIndices.size(); i_cell_begin++ ) {
+	std::size_t idx = lstUsedIndices[ i_cell_begin];
+	std::size_t idx_1 = lstUsedIndices[ i_cell_begin - 1];
+	m_PCHCellsBeginIndices.getDataRef(  idx) += m_PCHCellsBeginIndices.getData( idx_1);
+      }
     }
   }
 };

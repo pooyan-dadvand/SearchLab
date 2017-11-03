@@ -210,8 +210,8 @@ void testParallelCoherentHash() {
 
 int main( int arg, char *argv[] ) {
 
-  testParallelCoherentHash();
-  return 0;
+  // testParallelCoherentHash();
+  // return 0;
 
     
   std::string filename;

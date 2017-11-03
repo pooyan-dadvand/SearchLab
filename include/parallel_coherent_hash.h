@@ -94,7 +94,8 @@ public:
     bool found = false;
     const TDataType &ret = getData( key_in, found);
     if ( !found) {
-      throw SLexception( "ParallelCoherentHash::operator[] : couldn't find key = " + std::to_string( key_in));
+      // throw SLexception( "ParallelCoherentHash::operator[] : couldn't find key = " + std::to_string( key_in));
+      return m_InitialValue;
     }
     return ret;
   }
