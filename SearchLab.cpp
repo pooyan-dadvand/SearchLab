@@ -24,6 +24,8 @@
 // Interfaces
 #include "interfaces/points_new_interface.h"
 
+#include "parallel_coherent_hash.h"
+
 int RunPointSearchComparison( std::string Filename, double Radius ) {
 
   // Input data
@@ -70,14 +72,14 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     for ( std::size_t d = 0; d < 3; d++ ) {
       object[ d ] = point[ d ];
     }
-    object.radius = 0.5 / npoints;
+    object.radius = 0.5 / ( double)npoints;
 
     points[ i ] = new Point( point );
     points[ i ]->id = pid;
 
     objects[ i ] = new SphereObject< 3 >( object );
     objects[ i ]->id = pid;
-    objects[ i ]->radius = 0.5 / npoints;
+    objects[ i ]->radius = 0.5 / ( double)npoints;
   }
   double t1 = GetCurrentTime();
   std::cout << "Reading file = " << t1 - t0 << " sec." << std::endl;
@@ -105,7 +107,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     mid_object.coord[ i ] = ( max_point[ i ] + min_point[ i ] ) / 2.00;
   }
 
-  mid_object.radius = 0.5 / npoints;
+  mid_object.radius = 0.5 / ( double)npoints;
 
   // Output data Info
   Point &search_point = mid_point;
@@ -189,7 +191,30 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   return 0;
 }
 
+void testParallelCoherentHash() {
+  ParallelCoherentHash< int, int> pch;
+  const int size_hash = 1000;
+  pch.resize( size_hash, -1);
+  for ( int i = 0; i < size_hash; i++) {
+    // pch[ i] = i + 1;
+    pch.getDataRef( i) = i + 1;
+  }
+  for ( int i = 0; i < size_hash; i++) {
+    // int value = ( *( const ParallelCoherentHash< int, int> *)&pch)[ i]; // this does not insert values calls operator[] const
+    // printf( "id[ %4d] = %d\n", i, value);
+    // printf( "id[ %4d] = %d\n", i, pch[ i]); // always insert values as 'pch' is not const!!! calls operator[]
+    pch.getDataRef( i)++;
+    printf( "id[ %4d] = %d\n", i, pch.getData( i));
+  }
+  pch.PrintStatistics();
+}
+
 int main( int arg, char *argv[] ) {
+
+  // testParallelCoherentHash();
+  // return 0;
+
+    
   std::string filename;
 
   // Default filename
