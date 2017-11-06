@@ -10,12 +10,10 @@
 #include <locale>
 
 #include "bins_cells_container.h"
-#include "interval_count.h"
 #include "spatial_search_result.h"
 
 template < typename TObjectType > class PointsBins {
   static constexpr int Dimension = 3;
-  static constexpr bool USE_STD_VECTOR_IN_BINS = true; // set it to false to use ParallelCoherentHash
 
 public:
   using InternalPointType = std::array< double, Dimension >;
@@ -25,7 +23,7 @@ public:
 
   template < typename TIteratorType >
   PointsBins( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
-    : mCells( PointsBegin, PointsEnd, USE_STD_VECTOR_IN_BINS ) {
+    : mCells( PointsBegin, PointsEnd ) {
     mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
 
     if ( mNumberOfPoints == 0 ) {
@@ -119,75 +117,7 @@ public:
 
   void PrintStatistics() const {
     // Bins statistics
-    std::cout << "=== Bins statistics === \n";
-    std::locale prev_loc = std::cout.getloc();
-    std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
-    std::cout << "Bin of ";
-    std::size_t numberOfCells = 1;
-    for ( std::size_t i = 0; i < Dimension; i++ ) {
-      numberOfCells *= mCells.GetNumberOfCells( i );
-      std::cout << mCells.GetNumberOfCells( i );
-      if ( i < Dimension - 1 )
-        std::cout << " x ";
-    }
-    std::cout << " = " << numberOfCells << " cells" << std::endl;
-    std::cout << " = " << mCells.GetTotalNumberOfCells() << " cells" << std::endl;
-
-    // for ( std::size_t idx = 0; idx < Dimension; idx++) {
-    //   std::cout << " Cell size in axis = " << idx << " is " << mCells.GetCellSize( idx) <<
-    //   std::endl;
-    // }
-
-    std::size_t numUsedCells = 0;
-    std::size_t lastOffset = 0;
-    std::size_t totNumPoints = 0;
-    std::size_t minNumPoints = mCells.GetTotalNumberOfCells();
-    std::size_t maxNumPoints = 0;
-    std::size_t numCellsWithSinglePoint = 0;
-    for ( std::size_t idx = 1; idx < mCells.GetTotalNumberOfCells(); idx++ ) {
-      lastOffset = mCells.GetCellBeginIndex( idx );
-      std::size_t numberOfPoints = lastOffset - mCells.GetCellBeginIndex( idx - 1 );
-      if ( numberOfPoints != 0 ) {
-        numUsedCells++;
-        totNumPoints += numberOfPoints;
-        minNumPoints = ( numberOfPoints < minNumPoints ) ? numberOfPoints : minNumPoints;
-        maxNumPoints = ( numberOfPoints > maxNumPoints ) ? numberOfPoints : maxNumPoints;
-        if ( numberOfPoints == 1 )
-          numCellsWithSinglePoint++;
-      }
-    }
-    // last one
-    std::size_t numberOfPoints = mNumberOfPoints - lastOffset;
-    if ( numberOfPoints != 0 ) {
-      numUsedCells++;
-      minNumPoints = ( numberOfPoints < minNumPoints ) ? numberOfPoints : minNumPoints;
-      maxNumPoints = ( numberOfPoints > maxNumPoints ) ? numberOfPoints : maxNumPoints;
-    }
-    double occupancy_percent =
-        ( 100.0 * ( ( double )numUsedCells / ( double )mCells.GetTotalNumberOfCells() ) );
-    std::cout << " with " << numUsedCells << " used cells = " << occupancy_percent << " % occupancy"
-              << std::endl;
-    double bins_cells_array_size_MB =
-        ( double )( mCells.GetTotalNumberOfCells() * sizeof( std::size_t ) ) / ( 1024.0 * 1024.0 );
-    std::cout << " Bins size cell array = " << bins_cells_array_size_MB
-              << " MB, used = " << bins_cells_array_size_MB * occupancy_percent / 100.0 << " MB"
-              << std::endl;
-    std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
-              << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
-              << std::endl;
-
-    std::cout << "Number of cells with only one point = " << numCellsWithSinglePoint << std::endl;
-    IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
-    for ( std::size_t idx = 1; idx < mCells.GetTotalNumberOfCells(); idx++ ) {
-      lastOffset = mCells.GetCellBeginIndex( idx );
-      std::size_t numberOfPoints2 = lastOffset - mCells.GetCellBeginIndex( idx - 1 );
-      if ( numberOfPoints2 != 0 ) {
-        ic.countSample( ( double )numberOfPoints2 );
-      }
-    }
-    ic.print();
-    std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
-    std::cout << "=== End of statistics === \n";
+    mCells.PrintStatistics();
   }
 
 private:
