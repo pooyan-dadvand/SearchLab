@@ -8,6 +8,7 @@
 #include "timer.h"
 
 #include "points_bins.h"
+#include "points_bins_hash.h"
 
 namespace PointsNew {
 

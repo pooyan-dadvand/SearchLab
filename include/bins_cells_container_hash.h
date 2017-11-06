@@ -6,7 +6,7 @@
 #include "interval_count.h"
 #include "parallel_coherent_hash.h"
 
-class BinsCellsContainer {
+class BinsCellsContainerHash {
   static constexpr int Dimension = 3;
 
 protected:
@@ -20,7 +20,7 @@ protected:
   
 public:
   template < typename TIteratorType >
-  BinsCellsContainer( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
+  BinsCellsContainerHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
     : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ), m_numCells( 0) {
     
     std::size_t approximated_number_of_cells = std::distance( PointsBegin, PointsEnd );
@@ -131,7 +131,7 @@ protected:
   }
 };
 
-inline void BinsCellsContainer::PrintStatisticsHash() const {
+inline void BinsCellsContainerHash::PrintStatisticsHash() const {
     m_PCHCellsBeginIndices.PrintStatistics();
     std::size_t numUsedCells = 0;
     std::size_t lastOffset = 0;
@@ -182,7 +182,7 @@ inline void BinsCellsContainer::PrintStatisticsHash() const {
     ic.print();
 }
 
-inline void BinsCellsContainer::PrintStatistics() const {
+inline void BinsCellsContainerHash::PrintStatistics() const {
     // Bins statistics
     std::cout << "=== Bins statistics === \n";
     std::locale prev_loc = std::cout.getloc();
