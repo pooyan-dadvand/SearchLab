@@ -12,8 +12,8 @@ set( USE_MPI OFF CACHE BOOL "Use MPI implementation")
 
 # for Windows
 if (WIN32)
-  # set( ZLIB_ROOT "C:/GID64-git/libZ/windows")
-  set( ZLIB_ROOT "C:/GID64-git/libZ/zlib-1.2.11")
+  set( ZLIB_ROOT "C:/GID64-git/libZ/windows")
+  # set( ZLIB_ROOT "C:/GID64-git/libZ/zlib-1.2.11")
 endif (WIN32)
 
 find_package(ZLIB REQUIRED)
