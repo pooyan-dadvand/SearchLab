@@ -156,6 +156,8 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   // - New Interface
   PointsNew::RunTests< PointsBins< Point > >( "PointBins", points_vector, search_point, Radius,
                                               numsearch, numsearch_nearest );
+  PointsNew::RunTests< PointsBinsHash< Point > >( "PointBins", points_vector, search_point, Radius,
+						  numsearch, numsearch_nearest );
 
 // - Old Interface
 #ifdef USE_KRATOS

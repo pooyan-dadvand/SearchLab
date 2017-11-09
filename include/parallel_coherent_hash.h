@@ -110,6 +110,12 @@ public:
   }
 
   void PrintStatistics() const;
+
+  // for statistic purposes:
+  std::size_t getRawHashTableSize() const { return m_HashTable.size();}
+  TDataType getRawEntryData( std::size_t idx) const { return m_HashTable[ idx].getData();}
+  TDataType &getRawEntryDataRef( std::size_t idx) { return m_HashTable[ idx].getDataRef();}
+  bool getRawEntryUsed( std::size_t idx) const { return m_HashTable[ idx].getAge() != 0;}
   
 private:
   const TDataType &getData( const t_KeyType &key_in, bool &found_out) const;

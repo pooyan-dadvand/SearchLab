@@ -9,10 +9,10 @@
 #include <iostream>
 #include <locale>
 
-#include "bins_cells_container.h"
+#include "bins_cells_container_hash.h"
 #include "spatial_search_result.h"
 
-template < typename TObjectType > class PointsBins {
+template < typename TObjectType > class PointsBinsHash {
   static constexpr int Dimension = 3;
 
 public:
@@ -22,7 +22,7 @@ public:
   using ResultType = SpatialSearchResult< TObjectType >;
 
   template < typename TIteratorType >
-  PointsBins( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
+  PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
     : mCells( PointsBegin, PointsEnd ) {
     mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
 
@@ -122,7 +122,7 @@ public:
 
 private:
   std::size_t mNumberOfPoints;
-  BinsCellsContainer mCells;
+  BinsCellsContainerHash mCells;
   TObjectType **mpPoints;
 
   template < typename TIteratorType >
