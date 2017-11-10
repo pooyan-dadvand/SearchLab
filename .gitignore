@@ -12,6 +12,9 @@
 build/*
 !build/configure.sh
 
+# Ignore big case file folder
+cases/big/*
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

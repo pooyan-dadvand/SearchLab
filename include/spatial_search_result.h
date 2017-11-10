@@ -1,11 +1,15 @@
 #pragma once
 
+#include "global_pointer.h"
+
 template <typename TObjectType>
 class SpatialSearchResult {
-	TObjectType* mpObject;
+	using TPointerType = GlobalPointer<TObjectType>;
+	TPointerType mpObject;
 	double mDistance2;
 	bool mIsObjectFound;
 	bool mIsDistanceCalculated;
+
 public:
 	SpatialSearchResult() : mpObject(nullptr), mDistance2(0.00), mIsObjectFound(false), mIsDistanceCalculated(false) {}
 	SpatialSearchResult(TObjectType* pObject) : mpObject(pObject), mDistance2(0.00), mIsObjectFound(false), mIsDistanceCalculated(false) {
@@ -17,7 +21,8 @@ public:
 
 	SpatialSearchResult(SpatialSearchResult&& Other) = default;
 
-	TObjectType* const Get() const { return mpObject; }
+	TPointerType Get() { return mpObject; }
+	TPointerType const Get() const { return mpObject; }
 	void Set(TObjectType* pObject) {
 		mpObject = pObject;
 		mIsObjectFound = true;
@@ -32,7 +37,7 @@ public:
 	bool IsDistanceCalculated() const { return mIsDistanceCalculated; }
 
 	void Reset() {
-		mpObject = nullptr;
+		mpObject = mpObject(nullptr);
 		mDistance2 = 0.00;
 		mIsObjectFound = false;
 		mIsDistanceCalculated = false;

@@ -7,11 +7,10 @@
 
 #include "points_bins.h"
 
-
-
 template <typename TObjectType>
 class ObjectsBins {
 	static constexpr int Dimension = 3;
+
 public:
 	using InternalPointType = std::array<double, Dimension>;
 	using PointerType = TObjectType*;

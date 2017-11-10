@@ -1,311 +1,253 @@
-//System includes
-#include <fstream>
-#include <iostream>
-#include <ctime>
-#include <string>
+// System includes
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
+#include <iostream>
+#include <string>
+#include <win_missing.h>
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
-// Point
-#include "point.h"
-
+#ifdef USE_KRATOS
 // Ugly fixes
 #include <assert.h>
 
-// Kratos Independent
-#define KRATOS_INDEPENDENT
-
-#ifndef KRATOS_INDEPENDENT
-#define KRATOS_ERROR std::cout
-
-// Kratos includes
-#include "spatial_containers/spatial_containers.h"
-#endif // KRATOS_INDEPENDENT
-
-#include "points_bins.h"
-#include "points_hash.h"
-
-double GetCurrentTime() {
-#ifndef _OPENMP
-  // take car as it wraps after 2147 seconds or 36 minutes http://en.cppreference.com/w/cpp/chrono/c/clock
-  return static_cast<double>(std::clock()) / static_cast<double>(CLOCKS_PER_SEC);
-#else
-	return omp_get_wtime();
+#include "interfaces/points_old_interface.h"
+#include "interfaces/objects_old_interface.h"
 #endif
-}
 
-template< class T, std::size_t dim >
-class PointDistance2 {
-public:
-	double operator()(T const& p1, T const& p2) {
-		double dist = 0.0;
-		for (std::size_t i = 0; i < dim; i++) {
-			double tmp = p1[i] - p2[i];
-			dist += tmp*tmp;
-		}
-		return dist;
-	}
-};
+// Support for compressed streams
+#include "zstr.hpp"
 
-template<class SearchStructureType, class PointType, class IteratorType, class DistanceIterator>
-void RunTestsOldInterface(char const Title[], IteratorType PBegin, IteratorType PEnd, IteratorType results0, DistanceIterator distances0, std::size_t MaxResults, PointType* allPoints, double radius0, std::size_t numsearch, std::size_t bucket_size) {
-	double t0, t1;
-	std::size_t n;
+// Containers
+#include "containers.h"
 
-	std::size_t npoints = PEnd - PBegin;
-	std::vector<std::size_t> numresArray(numsearch);
-	PointType& point0 = allPoints[0];
+// Interfaces
+#include "interfaces/points_new_interface.h"
 
-	std::size_t numsearch_nearest = 10 * numsearch;
+#include "parallel_coherent_hash.h"
 
-	t0 = GetCurrentTime();
-	SearchStructureType nodes_tree(PBegin, PEnd);
-	t1 = GetCurrentTime();
-	std::cout << Title << "\t" << t1 - t0 << "\t";
+int RunPointSearchComparison( std::string Filename, double Radius ) {
 
-	t0 = GetCurrentTime();
-  #pragma omp parallel for
-	for (std::size_t i = 0; i < numsearch; i++) {
-		n = nodes_tree.SearchInRadius(point0, radius0, results0, distances0, MaxResults);
-  }
-	t1 = GetCurrentTime();
-	std::cout << t1 - t0 << "\t";
+  // Input data
+  std::cout << std::setprecision( 4 ) << std::fixed;
 
-	t0 = GetCurrentTime();
-	for (std::size_t i = 0; i < numsearch; i++) {
-		n = nodes_tree.SearchInRadius(point0, radius0, results0, distances0, MaxResults);
-  }
-	t1 = GetCurrentTime();
-	std::cout << t1 - t0 << "\t";
+  Point **points;
+  Point point;
+  SphereObject< 3 > object;
 
-	PointType** PNearestArray = new PointType*[numsearch];
-	std::vector<double> distancesArrayNearest(numsearch);
-	PointType* PNearest = PNearestArray[0];
-
-	t0 = GetCurrentTime();
-	for (std::size_t i = 0; i < 10; i++) {
-		nodes_tree.SearchNearestPoint(allPoints, numsearch, PNearestArray, distancesArrayNearest);
-  }
-	t1 = GetCurrentTime();
-
-	std::cout << t1 - t0 << "\t";
-	double distance = 0;
-
-
-	t0 = GetCurrentTime();
-	for (std::size_t i = 0; i < numsearch_nearest; i++) {
-		PNearest = nodes_tree.SearchNearestPoint(point0, distance);
-  }
-	t1 = GetCurrentTime();
-	std::cout << t1 - t0 << "\t";
-
-	std::cout << n << "\t" << *PNearestArray[0] << std::endl;
-}
-
-template<class BinsType>
-void RunTestsNewInterface(char const Title[], std::vector<Point<3>> & points_vector, const Point<3> & search_point, double radius, std::size_t numsearch, std::size_t numsearch_nearest) {
   double t0 = GetCurrentTime();
-  BinsType bins(points_vector.begin(), points_vector.end());
+  // std::ifstream input;
+  // input.open( Filename.c_str() );
+  zstr::ifstream input( Filename.c_str() );
+
+  if ( !input ) {
+    std::cout << "Cannot open data file" << std::endl;
+    return 1;
+  }
+
+  std::cout << "Comparison for " << Filename << std::endl;
+
+  std::size_t npoints;
+
+  input >> npoints;
+
+  if ( npoints <= 0) {
+    std::cout << "ERROR: no points information read, nothing to do!!!" << std::endl;
+    return 1;
+  }
+  
+  points = new Point *[ npoints ];
+  std::vector< Entities::PtrObjectType > objects( npoints );
+
+  std::size_t pid;
+  
+  for ( std::size_t i = 0; i < npoints; i++ ) {
+    input >> pid;
+    input >> point;
+
+    // if( !i || i == npoints - 1) {
+    //   std::cout << "Point " << i + 1 << " = " << pid << " - " << point << std::endl;
+    // }
+
+    for ( std::size_t d = 0; d < 3; d++ ) {
+      object[ d ] = point[ d ];
+    }
+    object.radius = 0.5 / ( double)npoints;
+
+    points[ i ] = new Point( point );
+    points[ i ]->id = pid;
+
+    objects[ i ] = new SphereObject< 3 >( object );
+    objects[ i ]->id = pid;
+    objects[ i ]->radius = 0.5 / ( double)npoints;
+  }
   double t1 = GetCurrentTime();
-  std::cout << "Points Bin" << "\t" << t1 - t0 << "\t";
+  std::cout << "Reading file = " << t1 - t0 << " sec." << std::endl;
 
-  std::vector<PointsBins<Point<3>>::ResultType> results;
-  PointsBins<Point<3>>::ResultType nearest_point_result;
+  Point min_point( *points[ 0 ] );
+  Point max_point( *points[ 0 ] );
+  Point mid_point;
+  SphereObject< 3 > mid_object;
 
-  t0 = GetCurrentTime();
-  #pragma omp parallel for firstprivate(results)
-  for (std::size_t i = 0; i < numsearch; i++) {
-    results.clear();
-    bins.SearchInRadius(search_point, radius, results);
+  min_point.id = 0;
+  max_point.id = 0;
+  mid_point.id = 0;
+
+  for ( std::size_t i = 0; i < npoints; i++ ) {
+    for ( std::size_t j = 0; j < 3; j++ ) {
+      if ( min_point[ j ] > ( *points[ i ] )[ j ] )
+        min_point[ j ] = ( *points[ i ] )[ j ];
+      if ( max_point[ j ] < ( *points[ i ] )[ j ] )
+        max_point[ j ] = ( *points[ i ] )[ j ];
+    }
   }
-  t1 = GetCurrentTime();
-  std::cout << t1 - t0 << "\t";
 
-  t0 = GetCurrentTime();
-  for (std::size_t i = 0; i < numsearch; i++) {
-    results.clear();
-    bins.SearchInRadius(search_point, radius, results);
+  for ( std::size_t i = 0; i < Dim; i++ ) {
+    mid_point.coord[ i ] = ( max_point[ i ] + min_point[ i ] ) / 2.00;
+    mid_object.coord[ i ] = ( max_point[ i ] + min_point[ i ] ) / 2.00;
   }
-  t1 = GetCurrentTime();
-  std::cout << t1 - t0 << "\t";
 
-  t0 = GetCurrentTime();
+  mid_object.radius = 0.5 / ( double)npoints;
 
-  #pragma omp parallel for firstprivate(nearest_point_result)
-  for (std::size_t i = 0; i < numsearch_nearest; i++) {
-    nearest_point_result = bins.SearchNearest(search_point);
-  }
-  t1 = GetCurrentTime();
-  std::cout << t1 - t0 << "\t";
+  // Output data Info
+  Point &search_point = mid_point;
+  SphereObject< 3 > &search_object = mid_object;
 
-  t0 = GetCurrentTime();
-  for (std::size_t i = 0; i < numsearch_nearest; i++) {
-    nearest_point_result = bins.SearchNearest(search_point);
-  }
-  t1 = GetCurrentTime();
-  std::cout << t1 - t0 << "\t" << results.size() << "\t" << *nearest_point_result.Get();
+  std::size_t numsearch = 1000000;
+  std::size_t numsearch_nearest = numsearch * 10;
+
+  std::cout << " min point : " << min_point << std::endl;
+  std::cout << " max point : " << max_point << std::endl;
+  std::cout << " search_point : " << search_point << std::endl;
+  std::cout << " search radius : " << Radius << std::endl;
   std::cout << std::endl;
+
+  std::cout << " Number of Points : " << npoints << std::endl;
+  std::cout << " Number of Repetitions : " << numsearch << std::endl;
+  std::cout << std::endl;
+
+  // Data Setup
+  Point *allPoints = new Point[ numsearch ];
+  SphereObject< 3 > *allSpheres = new SphereObject< 3 >[ numsearch ];
+
+  std::size_t max_results = npoints;
+  for ( std::size_t i = 0; i < 1; i++ ) {
+    allPoints[ i ] = search_point;
+    allSpheres[ i ] = search_object;
+  }
+
+  // Prepare the search point, search radius and resut arrays
+
+  std::vector< Entities::PtrObjectType > objectResults( max_results );
+  std::vector< double > resultDistances( max_results );
+
+#ifdef USE_KRATOS
+  double *distances = new double[ npoints ];
+  Entities::PointIterator p_results = new Entities::PtrPointType[ max_results ];
+#endif // USE_KRATOS
+
+  // Point-Based Search Structures
+  std::vector< Point > points_vector;
+  for ( std::size_t i = 0; i < npoints; i++ ) {
+    points_vector.push_back( *( points[ i ] ) );
+  }
+
+  // Point Interfaces
+  // - New Interface
+#if 1
+  PointsNew::RunTests< PointsBins< Point > >( "PointBins", points_vector, search_point, Radius,
+					      numsearch, numsearch_nearest );
+#else
+  PointsNew::RunTests< PointsBinsHash< Point > >( "PointBins", points_vector, search_point, Radius,
+						  numsearch, numsearch_nearest );
+#endif
+
+// - Old Interface
+#ifdef USE_KRATOS
+  PointsOld::RunTests< Containers::BinsStaticType >( "StaticBins", points, points + npoints,
+                                                     p_results, resultDistances.begin(),
+                                                     max_results, allPoints, Radius, numsearch, 1 );
+  PointsOld::RunTests< Containers::BinsDynamicType >(
+      "DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results,
+      allPoints, Radius, numsearch, 1 );
+  PointsOld::RunTests< Containers::OctreeType >( "OctTree\t", points, points + npoints, p_results,
+                                                 resultDistances.begin(), max_results, allPoints,
+                                                 Radius, numsearch, 10 );
+  PointsOld::RunTests< Containers::BinsDynamicOctreeType >(
+      "OcTreeDynamic\t", points, points + npoints, p_results, resultDistances.begin(), max_results,
+      allPoints, Radius, numsearch, 10 );
+#endif
+
+// Object Interfaces
+// - New Interface
+// TO BE FILLED
+
+// - Old Interface
+#ifdef USE_KRATOS
+  ObjectsOld::RunTests< Containers::BinsObjectStaticType >(
+      "StaticObjects", objects.begin(), objects.end(), objectResults.begin(),
+      resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1 );
+  ObjectsOld::RunTests< Containers::BinsObjectDynamicType >(
+      "DynamicObjects", objects.begin(), objects.end(), objectResults.begin(),
+      resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1 );
+#endif
+  // RunTestsOldInterface<BinsObjectDynamicType>
+  return 0;
 }
 
-int RunPointSearchComparison(std::string Filename, double Radius) {
-	constexpr std::size_t Dim = 3;
-
-	typedef Point<Dim>       PointType;
-
-	typedef PointType *      PtrPointType;
-	typedef PtrPointType *   PointVector;
-	typedef PtrPointType *   PointIterator;
-
-	typedef double* DistanceVector;
-	typedef double* DistanceIterator;
-
-#ifndef KRATOS_INDEPENDENT
-	typedef Kratos::Bucket<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>       bucket_type;  //Bucket;
-	typedef Kratos::Bins<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>         StaticBinsType;           //StaticBins;
-	typedef Kratos::BinsDynamic<Dim, PointType, PointVector, PtrPointType, PointIterator, DistanceIterator, PointDistance2<PointType, Dim>>  DynamicBinsType; //DynamicBins;
-
-	typedef Kratos::Tree< Kratos::KDTreePartition<bucket_type>>                  kdtree_type;                //Kdtree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionAverageSplit<bucket_type>>      kdtree_average_split_type;  //Kdtree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<bucket_type>>     kdtree_midpoint_split_type; //Kdtree;
-	typedef Kratos::Tree< Kratos::OCTreePartition<bucket_type>>                  OctreeType;                 //Octree;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<StaticBinsType>>  kdtree_StaticBinsType;      //KdtreeBins;
-	typedef Kratos::Tree< Kratos::OCTreePartition<StaticBinsType>>               octree_StaticBinsType;      //OctreeBins;
-	typedef Kratos::Tree< Kratos::KDTreePartitionMidPointSplit<DynamicBinsType>> kdtree_DynamicBinsType;     //KdtreeBins;
-	typedef Kratos::Tree< Kratos::OCTreePartition<DynamicBinsType>>              octree_bins_type;           //OctreeBins;
-#endif // KRATOS_INDEPENDENT
-
-	// Input data
-	std::cout << std::setprecision(4) << std::fixed;
-
-	PointVector points;
-
-	std::ifstream input;
-	input.open(Filename.c_str());
-
-	if (!input) {
-		std::cout << "Cannot open data file" << std::endl;
-		return 0;
-	}
-	std::cout << "Comparison for " << Filename << std::endl;
-	PointType   point;
-	std::size_t npoints;
-
-	input >> npoints;
-	points = new PointType*[npoints];
-
-	std::size_t pid;
-
-	for (std::size_t i = 0; i < npoints; i++) {
-		input >> pid;
-		input >> point;
-
-		points[i] = new PointType(point);
-		points[i]->id = pid;
-	}
-
-	PointType min_point(*points[0]);
-	PointType max_point(*points[0]);
-	PointType mid_point;
-
-	min_point.id = 0;
-	max_point.id = 0;
-	mid_point.id = 0;
-
-	for (std::size_t i = 0; i < npoints; i++) {
-		for (std::size_t j = 0; j < 3; j++) {
-			if (min_point[j] > (*points[i])[j]) min_point[j] = (*points[i])[j];
-			if (max_point[j] < (*points[i])[j]) max_point[j] = (*points[i])[j];
-		}
-	}
-
-	for (std::size_t i = 0; i < Dim; i++) {
-		mid_point.coord[i] = (max_point[i] + min_point[i]) / 2.00;
-	}
-
-	// Output data Info
-	PointType & search_point = mid_point;
-
-	std::size_t numsearch = 100000;
-	std::size_t numsearch_nearest = numsearch * 10;
-
-	std::cout << " min point : " << min_point << std::endl;
-	std::cout << " max point : " << max_point << std::endl;
-	std::cout << " search_point : " << search_point << std::endl;
-	std::cout << " search radius : " << Radius << std::endl;
-	std::cout << std::endl;
-
-	std::cout << " Number of Points : " << npoints << std::endl;
-	std::cout << " Number of Repetitions : " << numsearch << std::endl;
-	std::cout << std::endl;
-
-	std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
-
-	// Data Setup
-	PointType * allPoints;
-	allPoints = new PointType[numsearch];
-
-	std::size_t max_results = npoints;
-	for (std::size_t i = 0; i < 1; i++) {
-		allPoints[i] = search_point;
-	}
-
-	//Prepare the search point, search radius and resut arrays
-	DistanceIterator distances = new double[npoints];
-	PointIterator p_results = new PtrPointType[max_results];
-
-	// Point-Based Search Structures
-	std::vector<Point<3>> points_vector;
-	for (std::size_t i = 0; i < npoints; i++) {
-		points_vector.push_back(*(points[i]));
-	}
-
-  // New Interface
-	RunTestsNewInterface<PointsBins<Point<3>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
-
-  // Old Interface
-#ifndef KRATOS_INDEPENDENT
-	RunTestsOldInterface<StaticBinsType>("StaticBins", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 1);
-	RunTestsOldInterface<DynamicBinsType>("DynamicBins", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 1);
-  RunTestsOldInterface<OctreeType>("OcTree\t", points, points + npoints, p_results, distances, max_results, allPoints, Radius, numsearch, 10);
-
-  //RunTestsOldInterface<kdtree_type>("KdTree\t", points, points + npoints, p_results, distances, max_results, allPoints, radius, numsearch, 10);
-	//RunTestsOldInterface<kdtree_average_split_type>("KdTreeAverage", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
-	//RunTestsOldInterface<kdtree_midpoint_split_type>("KdTreeMidpoint", points, points + npoints, resultsArray, distancesArray, max_results, allPoints, radiusArray, numsearch, 10);
-#endif // KRATOS_INDEPENDENT
-
-	return 0;
+void testParallelCoherentHash() {
+  ParallelCoherentHash< int, int> pch;
+  const int size_hash = 1000;
+  pch.resize( size_hash, -1);
+  for ( int i = 0; i < size_hash; i++) {
+    // pch[ i] = i + 1;
+    int key = i - 5;
+    pch.getDataRef( key) = i + 1;
+  }
+  for ( int i = 0; i < size_hash; i++) {
+    int key = i - 5;
+    pch.getDataRef( key)++;
+    // printf( "id[ %4d] = %d\n", key, pch.getData( key));
+  }
+  pch.PrintStatistics();
 }
 
-int main(int arg, char* argv[]) {
-	std::string filename;
+int main( int arg, char *argv[] ) {
 
-	double radius = 0.01;
+  // testParallelCoherentHash();
+  // return 0;
 
+    
+  std::string filename;
 
-	if (arg > 1) {
-		std::cout << "Argument not founded " << std::endl;
-		filename = argv[1];
+  // Default filename
+  filename = "../cases/genericCube2x2x2.500000.pts";
+  // filename = "../cases/genericCube100x100x100.5051.pts";
+  // filename = "../cases/randomCube2000000.pts";
 
-		if (arg == 3) {
-			radius = atof(argv[2]) / 1000000;
-		}
+  // Default radius
+  double radius = 0.0102;
 
+  if ( arg > 1 ) {
+    if ( !strncasecmp( argv[ 1 ], "-h", 2 ) || !strncasecmp( argv[ 1 ], "--h", 2 ) ) {
+      std::cout << "Usage: " << argv[ 0 ] << " [ filename [ radius ] ]" << std::endl;
+      std::cout << "       filename default value = " << filename << std::endl;
+      std::cout << "       radius default value   = " << radius << std::endl;
+      return 0;
+    }
+    filename = argv[ 1 ];
+    if ( arg == 3 ) {
+      radius = atof( argv[ 2 ] ) / 1000000;
+    }
+  }
 
-		return 0;
-	}
+  RunPointSearchComparison( filename, radius );
 
-	filename = "genericCube100x100x100.5051.pts";
-	RunPointSearchComparison(filename, radius);
-	filename = "offsetCube79x79x79.1603.pts";
-	RunPointSearchComparison(filename, radius);
-	filename = "clusterCube6x6x6X4913.490.pts";
-	RunPointSearchComparison(filename, radius);
-	filename = "line100000.5.pts";
-	RunPointSearchComparison(filename, radius);
+  // filename = "../cases/offsetCube79x79x79.1603.pts";
+  // RunPointSearchComparison(filename, radius);
+  // filename = "../cases/clusterCube6x6x6X4913.490.pts";
+  // RunPointSearchComparison(filename, radius);
+  // filename = "../cases/line100000.5.pts";
+  // RunPointSearchComparison(filename, radius);
 
-	return 0;
+  return 0;
 }

@@ -4,6 +4,7 @@
 template <typename TPointType>
 class BoundingBox {
 	static constexpr int Dimension = 3;
+protected:
 	TPointType mMinPoint;
 	TPointType mMaxPoint;
 public:
