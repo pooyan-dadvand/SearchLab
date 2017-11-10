@@ -17,6 +17,7 @@ protected:
   std::vector< std::size_t > mCellsBeginIndices;
   
 public:
+
   template < typename TIteratorType >
   BinsCellsContainer( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
     : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ) {
@@ -192,4 +193,4 @@ inline void BinsCellsContainer::PrintStatistics() const {
     
     std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
     std::cout << "=== End of statistics === \n";
-  }
+}

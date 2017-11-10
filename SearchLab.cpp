@@ -9,7 +9,6 @@
 #ifdef USE_KRATOS
 // Ugly fixes
 #include <assert.h>
-#define KRATOS_ERROR std::cout
 
 #include "interfaces/points_old_interface.h"
 #include "interfaces/objects_old_interface.h"
@@ -60,7 +59,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   std::vector< Entities::PtrObjectType > objects( npoints );
 
   std::size_t pid;
-
+  
   for ( std::size_t i = 0; i < npoints; i++ ) {
     input >> pid;
     input >> point;
@@ -192,7 +191,6 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
       resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1 );
 #endif
   // RunTestsOldInterface<BinsObjectDynamicType>
-
   return 0;
 }
 

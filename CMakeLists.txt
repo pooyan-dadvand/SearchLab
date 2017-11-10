@@ -71,4 +71,3 @@ if(CXX11_COMPILER)
     target_link_libraries(SearchLabMpi.exe ${MPI_LIBRARIES})
   endif(USE_MPI MATCHES ON)
 endif()
-

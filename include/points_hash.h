@@ -5,7 +5,7 @@
 
 #include "bounding_box.h"
 #include "spatial_search_result.h"
-#include "ParallelCoherentHash.h"
+#include "parallel_coherent_hash.h"
 
 template <typename TObjectType>
 class PointsHash {
