@@ -24,15 +24,16 @@ private:
   // internal class definitions
   t_KeyType getRandomOffset() {
     std::random_device rd; // rd() returns a random 'unsigned int'
-    constexpr size_t size_random_value = sizeof( unsigned int);
-    size_t num_random = ( sizeof( t_KeyType) + sizeof( t_KeyType) - 1) / size_random_value;
-    t_KeyType value = 0;
-    for ( size_t i = 0; i < num_random; i++) {
-      value = ( value << ( i * size_random_value)) ^ ( t_KeyType)rd();
-    }
-    if ( value < 0) // may be t_KeyType is signed, and we want positive offsets
-      value = -value;
-    return value;
+    // this is for the case when sizeof( t_KeyType) > sizeof( unsigned int)
+    // constexpr size_t size_random_value = sizeof( unsigned int);
+    // size_t num_random = ( sizeof( t_KeyType) + sizeof( t_KeyType) - 1) / size_random_value;
+    // t_KeyType value = 0;
+    // for ( size_t i = 0; i < num_random; i++) {
+    //   value = ( value << ( i * size_random_value)) ^ ( t_KeyType)rd();
+    // }
+    // if ( value < 0) // may be t_KeyType is signed, and we want positive offsets
+    //   value = -value;
+    return ( t_KeyType)( rd() & 0x7ffffffff); // rd() is an unsigned int, make it positive for the case where t_KeyType is signed
   } 
   
   class KeyAgeTuple {
@@ -90,6 +91,7 @@ public:
   void Insert( const t_KeyType &key_in, const TDataType &data_in, bool &found_or_inserted_out );
   
   // const TDataType &operator[]( const t_KeyType &key_in) const {
+  const TDataType &getData( const t_KeyType &key_in, bool &found_out) const; // so that user can check if key is there or not.
   const TDataType &getData( const t_KeyType &key_in) const {
     bool found = false;
     const TDataType &ret = getData( key_in, found);
@@ -111,14 +113,13 @@ public:
 
   void PrintStatistics() const;
 
-  // for statistic purposes:
+  // for statistic and direct access purposes:
   std::size_t getRawHashTableSize() const { return m_HashTable.size();}
   TDataType getRawEntryData( std::size_t idx) const { return m_HashTable[ idx].getData();}
   TDataType &getRawEntryDataRef( std::size_t idx) { return m_HashTable[ idx].getDataRef();}
   bool getRawEntryUsed( std::size_t idx) const { return m_HashTable[ idx].getAge() != 0;}
   
 private:
-  const TDataType &getData( const t_KeyType &key_in, bool &found_out) const;
   TDataType &getDataRef( const t_KeyType &key_in, bool &found_or_inserted_out);
   TDataType &findDataRef( const t_KeyType &key_in, bool &found_out);
   void FillRandomOffsets() {
