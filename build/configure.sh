@@ -16,7 +16,7 @@ cmake ..                                                                        
 -DCMAKE_CXX_COMPILER=${CXX}                                                                                         \
 -DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -fopenmp=libomp -Wsign-compare -std=c++11 -Wno-overloaded-virtual -mavx2 -g"  \
 -DCMAKE_C_FLAGS="${CMAKE_C_FLAGS} -fopenmp=libomp -mavx2 -g"                                                        \
--DKRATOS_PATH="/home/roigcarlo/Kratos/"                                                                             \
+-DKRATOS_PATH=""                                                                                                    \
 -DUSE_MPI=ON                                                                                                        \
--DUSE_KRATOS=OFF                                                                                                     \
+-DUSE_KRATOS=OFF                                                                                                    \
 -DCMAKE_BUILD_TYPE=Release

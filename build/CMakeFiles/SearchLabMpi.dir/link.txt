@@ -1,0 +1,1 @@
+/usr/bin/clang++    -fopenmp=libgomp -Wsign-compare -std=c++11 -Wno-overloaded-virtual -mavx2 -g -O3 -DNDEBUG   CMakeFiles/SearchLabMpi.dir/SearchLabMpi.cpp.o  -o SearchLabMpi -rdynamic /usr/lib/openmpi/lib/libmpi_cxx.so /usr/lib/openmpi/lib/libmpi.so -Wl,-rpath,/usr/lib/openmpi/lib 

@@ -22,6 +22,9 @@
 // Interfaces
 #include "interfaces/points_new_interface_mpi.h"
 
+//Octree includes
+#include "custom_utilities/octree_driver.h"
+
 int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunksX, int sizeChunksY, int sizeChunksZ) {
 
 	int mpi_rank, mpi_size;
@@ -209,35 +212,31 @@ int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunks
 
 int main(int arg, char* argv[]) {
 
-	MPI_Init(&arg, &argv);
-
-	std::string filename;
-
 	double radius = 0.01;
+  
+  //TESTS WITH OCTREE DRIVER
+	std::string filename;
+	  if (arg > 1) {
+		  std::cout << "Argument not founded " << std::endl;
+		  filename = argv[1];
+		  if (arg == 3) {
+  	    radius = atof(argv[2]) / 1000000;
+		  }
+    return 0;
+  }
+  //filename = "../cases/modifiedgenericCube2x2x2.500000.pts";
+  //filename = "../cases/genericCube2x2x2.500000.pts";
+	//filename = "../cases/genericCube10x10x10.55556.pts";
+	//filename = "../cases/genericCube100x100x100.5051.pts";
+	filename = "../cases/line100000.5.pts";
+	//filename = "../cases/offsetCube79x79x79.1603.pts";
+	//filename = "../cases/randomCube2000000.pts";
 
-	if (arg > 1) {
-		std::cout << "Argument not founded " << std::endl;
-		filename = argv[1];
-
-		if (arg == 3) {
-			radius = atof(argv[2]) / 1000000;
-		}
-
-		return 0;
-	}
-
-	// filename = "../cases/genericCube3x3x3.250000.pts";
-	filename = "../cases/randomCube2000000.pts";
-	RunPointSearchComparison(filename, radius, 4, 4, 3);
-	
-	// filename = "../cases/offsetCube79x79x79.1603.pts";
-	// RunPointSearchComparison(filename, radius);
-	// filename = "../cases/clusterCube6x6x6X4913.490.pts";
-	// RunPointSearchComparison(filename, radius);
-	// filename = "../cases/line100000.5.pts";
-	// RunPointSearchComparison(filename, radius);
-
-	MPI_Finalize();
-
+  //Calling the multiple point search using an octree
+  //RunMultiplePointMPISearchOctree( filename , radius , arg , argv );
+  RunMultiplePointMPISearchOctreeTest( filename , radius , arg , argv );
+  //RunPointSearchComparison(filename, radius, 4, 4, 3);
 	return 0;
 }
+
+
