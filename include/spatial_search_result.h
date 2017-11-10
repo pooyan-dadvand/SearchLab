@@ -4,8 +4,8 @@
 
 template <typename TObjectType>
 class SpatialSearchResult {
-	typedef GlobalPointer<TObjectType> TPtrType;
-	TPtrType mpObject;
+	using TPointerType = GlobalPointer<TObjectType>;
+	TPointerType mpObject;
 	double mDistance2;
 	bool mIsObjectFound;
 	bool mIsDistanceCalculated;
@@ -21,8 +21,8 @@ public:
 
 	SpatialSearchResult(SpatialSearchResult&& Other) = default;
 
-	TPtrType Get() { return mpObject; }
-	TPtrType const Get() const { return mpObject; }
+	TPointerType Get() { return mpObject; }
+	TPointerType const Get() const { return mpObject; }
 	void Set(TObjectType* pObject) {
 		mpObject = pObject;
 		mIsObjectFound = true;

@@ -10,6 +10,8 @@
 #include "partition_bins_cells_container.h"
 #include "spatial_search_result.h"
 
+#include "timer_mpi.h"
+
 template <typename TObjectType>
 class PartitionBins {
   static constexpr int Dimension = 3;
@@ -111,53 +113,6 @@ public:
       mpPartitions[i] = recvPartitions[i];
     }
 
-    // for(int p = 0; p < mpi_size; p++) {
-    //   if(p == mpi_rank) {
-    //     std::cout << "(" << mpi_rank << ") sendOffsets\n\t";
-    //     for (std::size_t i = 0; i < numberOfCells; i++) {
-    //       std::cout << sendOffsets[i] << " ";
-    //     }
-    //     std::cout << "\nEnd" << std::endl;
-
-    //     std::cout << "recvOffsets\n\t";
-    //     for (std::size_t i = 0; i < numberOfCells; i++) {
-    //       std::cout << recvOffsets[mpi_rank * numberOfCells + i] << " ";
-    //     }
-    //     std::cout << "\nEnd" << std::endl;
-
-    //     std::cout << "globalOffsets\n\t";
-    //     for (std::size_t i = 0; i < numberOfCells; i++) {
-    //       std::cout << globalOffsets[i] << " ";
-    //     }
-    //     std::cout << "\nEnd" << std::endl;
-
-    //     std::cout << "PartsInPerCell\n\t";
-    //     for (std::size_t i = 0; i < NumPartsPerCell; i++) {
-    //       if(sendPartitions[i] != -1) {
-    //         if(sendPartitions[i] < 10) {
-    //           std::cout << "0";
-    //         }
-    //         std::cout << sendPartitions[i] << " ";
-    //       } else {
-    //         std::cout << "--" << " ";
-    //       }
-    //     }
-    //     std::cout << "\n\t";
-    //     for (std::size_t i = 0; i < NumPartsPerCell; i++) {
-    //       if(mpPartitions[i] != -1) {
-    //         if(mpPartitions[i] < 10) {
-    //           std::cout << "0";
-    //         }
-    //         std::cout << mpPartitions[i] << " ";
-    //       } else {
-    //         std::cout << "--" << " ";
-    //       }
-    //     }
-    //     std::cout << "\nEnd" << std::endl;
-    //   }
-    //   MPI_Barrier(MPI_COMM_WORLD);
-    // }
-
     delete[] sendOffsets;
     delete[] recvOffsets;
     delete[] globalOffsets;
@@ -220,14 +175,5 @@ private:
         }
       }
     }
-  }
-
-  double Distance2(TObjectType const& FirstPoint, TObjectType const& SecondPoint) {
-    double result = double();
-    for (int i = 0; i < Dimension; i++) {
-      auto distance_i = FirstPoint[i] - SecondPoint[i];
-      result += distance_i * distance_i;
-    }
-    return result;
   }
 };

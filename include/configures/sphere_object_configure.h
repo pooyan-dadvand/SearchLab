@@ -15,7 +15,7 @@ public:
   static constexpr auto Epsilon   = std::numeric_limits<double>::epsilon();
   static constexpr auto Dimension = 3;
 
-  typedef Point<3>          PointType;
+  typedef Point          PointType;
   typedef SphereObject<3>   ObjectType;
   typedef SphereObject<3> * PointerType;
 
@@ -52,7 +52,7 @@ public:
    * @param rLowPoint  Lower point of the boundingbox.
    * @param rHighPoint Higher point of the boundingbox.
    */
-  static inline void CalculateBoundingBox(const PointerType& rObject, Point<3>& rLowPoint, Point<3>& rHighPoint) {
+  static inline void CalculateBoundingBox(const PointerType& rObject, Point& rLowPoint, Point& rHighPoint) {
     for(std::size_t d = 0; d < 3; d++) {
       rHighPoint[d] = rLowPoint[d] = (*rObject)[d];
     }
@@ -65,7 +65,7 @@ public:
    * @param rHighPoint Higher point of the boundingbox.
    * @param Radius     The extension radius to be applied to the boundingbox.
    */
-  static inline void CalculateBoundingBox(const PointerType& rObject, Point<3>& rLowPoint, Point<3>& rHighPoint, const double& Radius) {
+  static inline void CalculateBoundingBox(const PointerType& rObject, Point& rLowPoint, Point& rHighPoint, const double& Radius) {
     for(std::size_t d = 0; d < 3; d++) {
       rLowPoint[d] = (*rObject)[d] - Radius;
       rHighPoint[d] = (*rObject)[d] + Radius;
@@ -76,7 +76,7 @@ public:
    * @param rObject        Point for which the bounding box will be calculated.
    * @param rCentralPoint  The center point of the object.
    */
-  static inline void CalculateCenter(const PointerType& rObject, Point<3>& rCentralPoint) {
+  static inline void CalculateCenter(const PointerType& rObject, Point& rCentralPoint) {
     for(std::size_t d = 0; d < 3; d++) {
       rCentralPoint[d] = (*rObject)[d];
     }
@@ -124,7 +124,7 @@ public:
    * @param  rHighPoint Higher point of the boundingbox.
    * @return            Boolean indicating the result of the intersection test described.
    */
-  static inline bool IntersectionBox(const PointerType& rObject, const Point<3>& rLowPoint, const Point<3>& rHighPoint) {
+  static inline bool IntersectionBox(const PointerType& rObject, const Point& rLowPoint, const Point& rHighPoint) {
     for(std::size_t i = 0; i < Dimension; i++) {
       if( (*rObject)[i] < rLowPoint[i] - Epsilon || (*rObject)[i] > rHighPoint[i] + Epsilon) {
         return false;
@@ -143,7 +143,7 @@ public:
    * @param  Radius     The extension radius to be applied in the intersection.
    * @return            Boolean indicating the result of the intersection test described.
    */
-  static inline bool IntersectionBox(const PointerType& rObject, const Point<3>& rLowPoint, const Point<3>& rHighPoint, const double& Radius) {
+  static inline bool IntersectionBox(const PointerType& rObject, const Point& rLowPoint, const Point& rHighPoint, const double& Radius) {
     for(std::size_t i = 0; i < Dimension; i++) {
       if( ((*rObject)[i] + Radius) < rLowPoint[i] - Epsilon || ((*rObject)[i] - Radius) > rHighPoint[i] + Epsilon) {
         return false;

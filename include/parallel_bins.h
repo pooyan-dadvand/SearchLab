@@ -5,7 +5,6 @@
 #include <iostream>
 #include <algorithm>
 
-#include <time.h>
 #include <assert.h> 
 
 // OpenMP
@@ -18,20 +17,23 @@
 #include "partition_bins.h"
 #include "global_pointer.h"
 
+// Timer
+#include "timer_mpi.h"
+
 /**
  * Mpi version of the Bins.
  */
-template<class TObjectBins, class TPartitionBins = PartitionBins<typename TObjectBins::ObjectType>>
+template<class TLocalBins, class TPartitionBins = PartitionBins<typename TLocalBins::ObjectType>>
 class ParallelBins {
   static constexpr int Dimension = 3;
 
 public:
 
   // Use the types from the hosted bins
-  using InternalPointType = typename TObjectBins::InternalPointType;
-	using PointerType = typename TObjectBins::PointerType;
-	using ResultType = typename TObjectBins::ResultType;
-  using ObjectType = typename TObjectBins::ObjectType;
+  using InternalPointType = typename TLocalBins::InternalPointType;
+	using PointerType = typename TLocalBins::PointerType;
+	using ResultType = typename TLocalBins::ResultType;
+  using ObjectType = typename TLocalBins::ObjectType;
   using ResultArray = std::vector<ResultType>;
 
   /** Constructor using the objects.
@@ -45,16 +47,16 @@ public:
     InitializeMpi();
 
     GenerateLocalBins(LocalObjectsBegin, LocalObjectsEnd);
-    GeneratePartitionBins(LocalObjectsBegin, LocalObjectsEnd, mpi_size * 16);
+    GeneratePartitionBins(LocalObjectsBegin, LocalObjectsEnd, mpi_size * 10);
   }
 
   /** Assignment operator.
    * Assignment operator.
    * @param rOther reference object
    */
-  ParallelBins<TObjectBins, TPartitionBins> & operator=(const ParallelBins<TObjectBins, TPartitionBins> & rOther) {
+  ParallelBins<TLocalBins, TPartitionBins> & operator=(const ParallelBins<TLocalBins, TPartitionBins> & rOther) {
     mPartitionBins = rOther.mPartitionBins;
-    mObjectBins = rOther.mObjectBins;
+    mLocalBins = rOther.mLocalBins;
 
     return *this;
   }
@@ -72,7 +74,7 @@ public:
    */
   virtual ~ParallelBins() {
     delete mPartitionBins;
-    delete mObjectBins;
+    delete mLocalBins;
   }
 
   /** Search in radius
@@ -102,7 +104,7 @@ public:
     std::vector<std::vector<double>> SendRadius(mpi_size, std::vector<double>(0));
     std::vector<std::vector<double>> RecvRadius(mpi_size, std::vector<double>(0));
 
-    std::vector<bool> SentObjectsMap(NumberOfObjects * mpi_size, 0);
+    std::vector<std::vector<int>> SentObjectsIds(mpi_size, std::vector<int>(0));
 
     MPI_Request * sendReq = new MPI_Request[mpi_size];
     MPI_Request * recvReq = new MPI_Request[mpi_size];
@@ -111,14 +113,16 @@ public:
     MPI_Status * recvStat = new MPI_Status[mpi_size];
 
     // Calculate the remote partitions where we need to search for each point and execute the transfer in background
-    SearchPartitions(ObjectsBegin, NumberOfObjects, Radius, SendObjects, SendRadius, SentObjectsMap);
+    SearchPartitions(ObjectsBegin, NumberOfObjects, Radius, SendObjects, SendRadius, SentObjectsIds);
     SendTransferPoints(SendObjects, sendReq, recvReq);
     SearchInRadiusLocal(ObjectsBegin, NumberOfObjects, Radius, ResultsArray);
 
     // Recv the points after the local search has finished and execute the remote search (all points should be here by now)
     for(int p = 0; p < mpi_size; p++) {
       RecvTransferPoints(RecvObjects, sendReq, recvReq, sendStat, recvStat, p);
+    }
 
+    for(int p = 0; p < mpi_size; p++) {
       if(p != mpi_rank && RecvObjects[p].size() != 0) {
         auto ObjectsRemoteBeg = RecvObjects[p].begin();
         auto ObjectsRemoteEnd = RecvObjects[p].end();
@@ -129,20 +133,22 @@ public:
         SearchInRadiusLocal(ObjectsRemoteBeg, NumberOfRecvObjects, Radius, SendResults[p]);
       }
     }
-    
+
     // Send the results (global pointers) back to the propper process and merge with the localss
     TransferResults(SendObjects, SendResults, RecvResults);
-    AssembleResults(SentObjectsMap, ResultsArray, RecvResults);
+    AssembleResults(SentObjectsIds, ResultsArray, RecvResults);
 
     // std::size_t accumNumResults = 0;
     // for(std::size_t i = 0; i < NumberOfObjects; i++) {
     //   accumNumResults += ResultsArray[i].size();
     //   // std::cout << "(" << mpi_rank << ") Point (" << (*(ObjectsBegin + i))[0] << "," << (*(ObjectsBegin + i))[1] << "," << (*(ObjectsBegin + i))[2] << ") results: " << ResultsArray[i].size() << std::endl;
     // }
-
+    //
     // MPI_Barrier(MPI_COMM_WORLD);
-
-    // std::cout << "Finish: " << accumNumResults << std::endl;
+    //
+    // if(!mpi_rank) {
+    //   std::cout << "Finish: " << ResultsArray[NumberOfObjects/2].size() << " " << accumNumResults << std::endl;
+    // }
 
     delete[] sendReq;
     delete[] recvReq;
@@ -177,7 +183,7 @@ private:
    */
   template<typename TIteratorType>
   void GenerateLocalBins(TIteratorType const& ObjectsBegin, TIteratorType const& ObjectsEnd) {
-    mObjectBins = new TObjectBins(ObjectsBegin, ObjectsEnd);
+    mLocalBins = new TLocalBins(ObjectsBegin, ObjectsEnd);
   }
 
   /**
@@ -206,7 +212,7 @@ private:
       double const & Radius,
       std::vector<std::vector<ObjectType>> & SendObjects,
       std::vector<std::vector<double>> & SendRadius,
-      std::vector<bool> & SentObjectsMap) {
+      std::vector<std::vector<int>> & SendObjectsIds) {
 
     // int TotalToSend = 0;
     // int GlobalToSend = 0;
@@ -225,8 +231,7 @@ private:
         if(part != mpi_rank && part != -1){
           SendObjects[part].push_back(*ObjectItr);
           SendRadius[part].push_back(Radius);
-
-          SentObjectsMap[part*NumberOfObjects+i]=1;
+          SendObjectsIds[part].push_back(i);
           // TotalToSend++;
         }
       }
@@ -259,7 +264,7 @@ private:
     for(std::size_t i = 0; i < NumberOfObjects; i++) {
       auto ObjectItr  = ObjectsBegin + i;
       auto ResultsItr = ResultsBegin + i;
-      mObjectBins->SearchInRadius(*ObjectItr, Radius, *ResultsItr);
+      mLocalBins->SearchInRadius(*ObjectItr, Radius, *ResultsItr);
       // std::cout << "Point:" << " (" << (*ObjectItr)[0] << "," << (*ObjectItr)[1] << "," << (*ObjectItr)[2] << ") " << "Found: " <<  (*ResultsItr).size() << " Results." << std::endl;
     }
   }
@@ -273,11 +278,17 @@ private:
     sendBuffers = std::vector<double *>(mpi_size, nullptr);
     recvBuffers = std::vector<double *>(mpi_size, nullptr);
 
+    
     for(int p = 0; p < mpi_size; p++) {
       sendSize[p] = sendObjects[p].size();
     }
 
     MPI_Alltoall(sendSize, 1, MPI_INT, recvSize, 1, MPI_INT, MPI_COMM_WORLD);
+    // std::cout << "(" << mpi_rank << ") sendrecvSize: ";
+    // for(int p = 0; p < mpi_size; p++) {
+    //   std::cout << "[" << p << "] " << sendSize[p] << "|" << sendSize[p];
+    // }
+    // std::cout << std::endl;
 
     for(int p = 0; p < mpi_size; p++) {
       sendBuffers[p] = new double[sendSize[p] * 3];
@@ -437,36 +448,23 @@ private:
    * @param  Results        List of local results for this process search points.
    * @param  recvResults    List of remote results for this process search points.
    */
-  void AssembleResults(const std::vector<bool> & SentObjectsMap, std::vector<ResultArray> & Results, std::vector<std::vector<ResultArray>> & recvResults) {
-    std::size_t NumberOfObjects = Results.size();
-    
+  void AssembleResults(std::vector<std::vector<int>> & SendObjectsIds, std::vector<ResultArray> & Results, std::vector<std::vector<ResultArray>> & recvResults) {
     for(int p = 0; p < mpi_size; p++) {
-      if(p != mpi_rank) {
+      auto sentToProc = SendObjectsIds[p].size();
+      if(sentToProc) {
         std::size_t recvResIndex = 0;
-        for(std::size_t i = 0; i < NumberOfObjects; i++) { // Iterate over the results arrays
-          if(SentObjectsMap[p * NumberOfObjects + i]) {    // If the object was sent to proc i to search
-            for(std::size_t j = 0; j < recvResults[p][recvResIndex].size(); j++) {
-              Results[i].push_back(recvResults[p][recvResIndex][j]);
-            }
-            recvResIndex++;
+        for(std::size_t i = 0; i < sentToProc; i++) { // Iterate over the results arrays
+          auto numRemResults = recvResults[p][recvResIndex].size();
+          if(numRemResults > 0) { // It still can be 0!!!
+            Results[SendObjectsIds[p][i]].reserve(Results[SendObjectsIds[p][i]].size()+numRemResults);
+            Results[SendObjectsIds[p][i]].insert(Results[SendObjectsIds[p][i]].end(),recvResults[p][recvResIndex].begin(), recvResults[p][recvResIndex].end());
           }
+          recvResIndex++;
         }
       }
     }
   }
 
-  /** Calculates the squared distance.
-   * Calculates the squared distance between two points.
-   */
-  double Distance2(ObjectType const& FirstPoint, ObjectType const& SecondPoint) {
-		double result = double();
-		for (int i = 0; i < Dimension; i++) {
-			auto distance_i = FirstPoint[i] - SecondPoint[i];
-			result += distance_i * distance_i;
-		}
-		return result;
-	}
- 
   /** Mpi related variables
    * Mpi related variables
    * @mpi_rank: id of the current process for the given mpi communicator
@@ -481,7 +479,7 @@ private:
    * @mObjectBin: Stores where the objects of the partition/s associated to this process are located in the space
    */
   TPartitionBins  * mPartitionBins;
-  TObjectBins     * mObjectBins;
+  TLocalBins      * mLocalBins;
   std::size_t       mObjectsSize;
   
   /**

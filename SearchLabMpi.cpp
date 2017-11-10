@@ -25,61 +25,105 @@
 //Octree includes
 #include "custom_utilities/octree_driver.h"
 
-int RunPointSearchComparison(std::string Filename, double Radius) {
+int RunPointSearchComparison(std::string Filename, double Radius, int sizeChunksX, int sizeChunksY, int sizeChunksZ) {
+
+	int mpi_rank, mpi_size;
+
+  MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
 
 	// Input data
 	std::cout << std::setprecision(4) << std::fixed;
 
-	Point<3> ** points;
-  Point<3> point;
+	Point ** points;
+  Point point;
   SphereObject<3> object;
 
 	std::ifstream input;
 	input.open(Filename.c_str());
 
 	if (!input) {
-		std::cout << "Cannot open data file" << std::endl;
+		if(!mpi_rank) {
+			std::cout << "Cannot open data file" << std::endl;
+		}
 		return 1;
 	}
 
-	std::cout << "Comparison for " << Filename << std::endl;
+	if(!mpi_rank) {
+		std::cout << "Comparison for " << Filename << std::endl;
+	}
 
 	std::size_t npoints;
-
 	input >> npoints;
 
-	points = new Point<3>*[npoints];
-  std::vector<Entities::PtrObjectType> objects(npoints);
+	int sizeBlock = 2;									// Num of blocks per chunk
+	std::size_t npointstot = npoints;
+
+	points = new Point*[npointstot];
+  // std::vector<Entities::PtrObjectType> objects(npointstot);
 
 	std::size_t pid;
 
+	int Sdx = 4;
+	int Sdy = 4;
+	int Sdz = 3;
+
+	int Sdi = 0;
+
+	for(int i = 48; i < mpi_size; i*=2) {
+		if(Sdi == 0) Sdx *= 2;
+		if(Sdi == 1) Sdy *= 2;
+		if(Sdi == 2) Sdz *= 2;
+		Sdi = (Sdi + 1) % 3;
+	}
+
+	int Idx = mpi_rank % Sdx;
+	int Idy = (mpi_rank % (Sdx * Sdy)) / Sdx;
+	int Idz = mpi_rank / (Sdx * Sdy);
+
+	// std::cout << mpi_rank << " " << Idx << " " << Idy << " " << Idz << std::endl;
+
 	for(std::size_t i = 0; i < npoints; i++) {
+
 		input >> pid;
 		input >> point;
 
     for(std::size_t d = 0; d < 3; d++) {
       object[d] = point[d];
     }
+
     object.radius = 0.5/npoints;
 
-		points[i] = new Point<3>(point);
-		points[i]->id = pid;
+		// for(int z = 0; z < sizeChunksZ; z++) {
+		// 	for(int y = 0; y < sizeChunksY; y++) {
+		// 		for(int x = 0; x < sizeChunksX; x++) {
+		// 			int index = i + x * npoints + y * sx * npoints + z * sx * sy * npoints;
 
-    objects[i] = new SphereObject<3>(object);
-    objects[i]->id = pid;
-    objects[i]->radius = 0.5/npoints;
+		int index = i;
+		points[index] = new Point(point);
+		points[index]->id = pid;
+		(*points[index])[0] += Idx;
+		(*points[index])[1] += Idy;
+		(*points[index])[2] += Idz;
+
+		// objects[index] = new SphereObject<3>(object);
+		// objects[index]->id = pid;
+		// objects[index]->radius = 0.5/npoints;
+		// 		}
+		// 	}
+		// }
 	}
 
-	Point<3> min_point(*points[0]);
-	Point<3> max_point(*points[0]);
-	Point<3> mid_point;
+	Point min_point(*points[0]);
+	Point max_point(*points[0]);
+	Point mid_point;
   SphereObject<3> mid_object;
 
-	min_point.id = 0;
-	max_point.id = 0;
-	mid_point.id = 0;
+	// min_point.id = 0;
+	// max_point.id = 0;
+	// mid_point.id = 0;
 
-	for (std::size_t i = 0; i < npoints; i++) {
+	for (std::size_t i = 0; i < npointstot; i++) {
 		for (std::size_t j = 0; j < 3; j++) {
 			if (min_point[j] > (*points[i])[j]) min_point[j] = (*points[i])[j];
 			if (max_point[j] < (*points[i])[j]) max_point[j] = (*points[i])[j];
@@ -94,51 +138,56 @@ int RunPointSearchComparison(std::string Filename, double Radius) {
   mid_object.radius = 0.5/npoints;
 
 	// Output data Info
-	Point<3> & search_point = mid_point;
+	Point & search_point = mid_point;
   SphereObject<3> & search_object = mid_object;
 
-	std::size_t numsearch = 100000;
-	std::size_t numsearch_nearest = numsearch * 10;
+	std::size_t numsearch = npointstot;
+	std::size_t numsearch_nearest = npointstot * 10;
 
-	std::cout << " min point : " << min_point << std::endl;
-	std::cout << " max point : " << max_point << std::endl;
-	std::cout << " search_point : " << search_point << std::endl;
-	std::cout << " search radius : " << Radius << std::endl;
-	std::cout << std::endl;
+	if(!mpi_rank) {
+		std::cout << " min point : " << min_point << std::endl;
+		std::cout << " max point : " << max_point << std::endl;
+		std::cout << " search_point : " << search_point << std::endl;
+		std::cout << " search radius : " << Radius << std::endl;
+		std::cout << std::endl;
 
-	std::cout << " Number of Points : " << npoints << std::endl;
-	std::cout << " Number of Repetitions : " << numsearch << std::endl;
-	std::cout << std::endl;
+		std::cout << " Number of Points : " << npoints << std::endl;
+		std::cout << " Number of Repetitions : " << numsearch << std::endl;
+		std::cout << std::endl;
 
-	std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
-
-	// Data Setup
-	Point<3> * allPoints = new Point<3>[numsearch];
-  SphereObject<3> * allSpheres = new SphereObject<3>[numsearch];
-
-	std::size_t max_results = npoints;
-	for (std::size_t i = 0; i < 1; i++) {
-		allPoints[i] = search_point;
-    allSpheres[i] = search_object;
+		// std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
 	}
+
+	// // Data Setup
+	// Point * allPoints = new Point[numsearch];
+  // SphereObject<3> * allSpheres = new SphereObject<3>[numsearch];
+
+	// std::size_t max_results = npoints;
+	// for (std::size_t i = 0; i < 1; i++) {
+	// 	allPoints[i] = search_point;
+  //   allSpheres[i] = search_object;
+	// }
 
 	//Prepare the search point, search radius and resut arrays
 
+#ifdef USE_KRATOS
   std::vector<Entities::PtrObjectType> objectResults(max_results);
   std::vector<double> resultDistances(max_results);
 
+
 	double * distances = new double[npoints];
 	Entities::PointIterator p_results = new Entities::PtrPointType[max_results];
+#endif
 
 	// Point-Based Search Structures
-	std::vector<Point<3>> points_vector;
-	for (std::size_t i = 0; i < npoints; i++) {
+	std::vector<Point> points_vector;
+	for (std::size_t i = 0; i < npointstot; i++) {
 		points_vector.push_back(*(points[i]));
 	}
 
   // Point Interfaces
   // - New Interface
-  PointsNew::RunTests<ParallelBins<PointsBins<Point<3>>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
+  PointsNew::RunTests<ParallelBins<PointsBins<Point>>>("PointBins", points_vector, search_point, Radius, numsearch, numsearch_nearest);
 
   // - Old Interface
 #ifdef USE_KRATOS
@@ -186,16 +235,8 @@ int main(int arg, char* argv[]) {
   //Calling the multiple point search using an octree
   //RunMultiplePointMPISearchOctree( filename , radius , arg , argv );
   RunMultiplePointMPISearchOctreeTest( filename , radius , arg , argv );
+  //RunPointSearchComparison(filename, radius, 4, 4, 3);
 	return 0;
 }
-
-
-
-
-
-
-
-
-
 
 

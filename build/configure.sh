@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # Kratos OmniCompile
 clear
@@ -14,7 +14,9 @@ export CXX=clang++
 cmake ..                                                                                                            \
 -DCMAKE_C_COMPILER=${CC}                                                                                            \
 -DCMAKE_CXX_COMPILER=${CXX}                                                                                         \
--DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -fopenmp=libgomp -Wsign-compare -std=c++11 -Wno-overloaded-virtual -mavx2 -g" \
--DCMAKE_C_FLAGS="${CMAKE_C_FLAGS} -fopenmp=libgomp -mavx2 -g"                                                       \
--DKRATOS_PATH="/home/jorge/Dropbox/RREPOSITORIOS/Kratos/"                                                                             \
+-DCMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -fopenmp=libomp -Wsign-compare -std=c++11 -Wno-overloaded-virtual -mavx2 -g"  \
+-DCMAKE_C_FLAGS="${CMAKE_C_FLAGS} -fopenmp=libomp -mavx2 -g"                                                        \
+-DKRATOS_PATH=""                                                                                                    \
+-DUSE_MPI=ON                                                                                                        \
+-DUSE_KRATOS=OFF                                                                                                    \
 -DCMAKE_BUILD_TYPE=Release

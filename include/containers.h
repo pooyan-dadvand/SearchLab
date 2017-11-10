@@ -28,8 +28,8 @@ public:
 
 // Entities used in the tests
 namespace Entities {
-  typedef Point<3>          PointType;
-  typedef Point<3> *        PtrPointType;
+  typedef Point          PointType;
+  typedef Point *        PtrPointType;
   typedef PtrPointType *    PointIterator;
 
   typedef SphereObject<3>   ObjectType;
@@ -112,3 +112,4 @@ namespace Containers {
   > BinsObjectDynamicType;
 #endif
 }
+
