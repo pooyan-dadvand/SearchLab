@@ -48,7 +48,7 @@ public:
   Point const &Coordinates() const { return *this; }
 };
 
-std::ostream &operator<<( std::ostream &rOut, Point &rPoint ) {
+std::ostream &operator<<( std::ostream &rOut, const Point &rPoint ) {
   rOut << "(" << rPoint.id << ") ";
   for ( std::size_t i = 0; i < 3; i++ )
     rOut << rPoint[ i ] << " ";

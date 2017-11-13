@@ -14,7 +14,7 @@
 template < typename TDataType, typename t_KeyType = std::uint64_t >
 class ParallelCoherentHash {
 private:
-  static constexpr int MAXIMUM_AGE = 63;
+  static constexpr int MAXIMUM_AGE = 64;
   static constexpr double LOAD_FACTOR = 0.9;
 
 public:
@@ -59,7 +59,7 @@ private:
     HashEntry() : m_MaximumAge( 0 ), m_KeyAge( 0 ), m_Data() {}
     HashEntry( const t_KeyType &key_in, const TDataType &data_in )
       : m_MaximumAge( 0 ), m_KeyAge( key_in ), m_Data( data_in ) {}
-    HashEntry( HashEntry const &he )
+    HashEntry( const HashEntry &he )
       : m_MaximumAge( he.m_MaximumAge), m_KeyAge( he.m_KeyAge), m_Data( he.m_Data) {}
     HashEntry &operator=( const HashEntry &he) {
       m_MaximumAge = he.m_MaximumAge;
@@ -195,6 +195,7 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::Insert( const t_KeyType
     std::size_t idx = getHash( entry_to_insert.getKey(), ( char)( age - 1));
     HashEntry old_entry( m_HashTable[ idx]);
     // if entry_to_insert is older than stored one, evict it!
+    // atomicMAX
     if ( entry_to_insert.getAge() > old_entry.getAge()) {
       // we want to maintain the maximum age of the entry
       m_HashTable[ idx].copyKeyAgeData( entry_to_insert);
@@ -212,7 +213,7 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::Insert( const t_KeyType
       }
       if ( old_entry.getAge() > 0) {
 	// evicted cell was not empty, so process evicted key
-	entry_to_insert.copyKeyAgeData( old_entry);
+	entry_to_insert = old_entry;
 	age = old_entry.getAge();
 	age++; // next try for evicted element
       } else {

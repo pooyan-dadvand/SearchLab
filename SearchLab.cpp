@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <sys/stat.h>
 #include <win_missing.h>
 
 #ifdef USE_KRATOS
@@ -25,8 +26,15 @@
 
 #include "parallel_coherent_hash.h"
 
-int RunPointSearchComparison( std::string Filename, double Radius ) {
+bool G_UsePointsBinsHash = false;
 
+inline bool FileExists( const std::string &file_name) {
+  // from https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
+  struct stat buffer;   
+  return ( stat ( file_name.c_str(), &buffer) == 0); 
+}
+
+int RunPointSearchComparison( std::string Filename, double Radius ) {
   // Input data
   std::cout << std::setprecision( 4 ) << std::fixed;
 
@@ -112,8 +120,15 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   Point &search_point = mid_point;
   SphereObject< 3 > &search_object = mid_object;
 
+#ifdef NDEBUG
+  // i.e. compiling without assert, i.e. release mode
   std::size_t numsearch = 1000000;
   std::size_t numsearch_nearest = numsearch * 10;
+#else
+  // compiling with asserts, i.e. debug mode
+  std::size_t numsearch = 1000;
+  std::size_t numsearch_nearest = numsearch * 10;
+#endif
 
   std::cout << " min point : " << min_point << std::endl;
   std::cout << " max point : " << max_point << std::endl;
@@ -153,13 +168,15 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
 
   // Point Interfaces
   // - New Interface
-#if 1
-  PointsNew::RunTests< PointsBins< Point > >( "PointBins", points_vector, search_point, Radius,
-					      numsearch, numsearch_nearest );
-#else
-  PointsNew::RunTests< PointsBinsHash< Point > >( "PointBins", points_vector, search_point, Radius,
-						  numsearch, numsearch_nearest );
-#endif
+  if ( !G_UsePointsBinsHash) {
+    std::cout << "Using PointsBins" << std::endl;
+    PointsNew::RunTests< PointsBins< Point > >( "PointBins", points_vector, search_point, Radius,
+						numsearch, numsearch_nearest );
+  } else {
+    std::cout << "Using PointsHash" << std::endl;
+    PointsNew::RunTests< PointsBinsHash< Point > >( "PointBinsHash", points_vector, search_point, Radius,
+						    numsearch, numsearch_nearest );
+  }
 
 // - Old Interface
 #ifdef USE_KRATOS
@@ -211,33 +228,74 @@ void testParallelCoherentHash() {
   pch.PrintStatistics();
 }
 
-int main( int arg, char *argv[] ) {
+void PrintUsage( const std::string &progname, const std::string &filename, double radius) {
+  std::cout << "Usage: " << progname << " [ -type bin/hash] [ filename [ radius ] ]" << std::endl;
+  std::cout << "       filename default value = " << filename << std::endl;
+  std::cout << "       radius default value   = " << radius << std::endl;
+  std::cout << "       type default value = " << ( G_UsePointsBinsHash ? "hash" : "bin") << std::endl;
+}
+
+int main( int argc, char *argv[] ) {
 
   // testParallelCoherentHash();
   // return 0;
 
     
-  std::string filename;
-
   // Default filename
-  filename = "../cases/genericCube2x2x2.500000.pts";
+  std::string filename_default = "../cases/genericCube2x2x2.500000.pts";
   // filename = "../cases/genericCube100x100x100.5051.pts";
   // filename = "../cases/randomCube2000000.pts";
 
   // Default radius
-  double radius = 0.0102;
+  double radius_default = 0.0102;
 
-  if ( arg > 1 ) {
-    if ( !strncasecmp( argv[ 1 ], "-h", 2 ) || !strncasecmp( argv[ 1 ], "--h", 2 ) ) {
-      std::cout << "Usage: " << argv[ 0 ] << " [ filename [ radius ] ]" << std::endl;
-      std::cout << "       filename default value = " << filename << std::endl;
-      std::cout << "       radius default value   = " << radius << std::endl;
-      return 0;
+  // used filename and radius
+  std::string filename = filename_default;
+  double radius = radius_default;
+
+  if ( argc > 1 ) {
+    bool has_filename = false;
+    for ( int idx_arg = 1; idx_arg < argc; idx_arg++) {
+      if ( argv[ idx_arg][ 0] == '-') {
+	if ( !strncasecmp( argv[ idx_arg ], "-h", 2 ) || !strncasecmp( argv[ idx_arg ], "--h", 3 ) ) {
+	  PrintUsage( argv[ 0], filename_default, radius_default);
+	  return 0;
+	} else {
+	  if ( !strncasecmp( argv[ idx_arg ], "-t", 2 ) || !strncasecmp( argv[ idx_arg ], "--t", 3 ) ) {
+	    std::string error_msg;
+	    if ( idx_arg + 1 < argc) {
+	      idx_arg++;
+	      if ( !strncasecmp( argv[ idx_arg ], "b", 1 ) || !strcasecmp( argv[ idx_arg ], "bin") ) {
+		G_UsePointsBinsHash = false;
+	      } else if ( !strncasecmp( argv[ idx_arg ], "h", 1 ) || !strcasecmp( argv[ idx_arg ], "hash" ) ) {
+		G_UsePointsBinsHash = true;
+	      } else {
+		std::cout << "error: unknown type: " << argv[ idx_arg] << std::endl;;
+		PrintUsage( argv[ 0], filename_default, radius_default);
+		return 0;
+	      }
+	    } else {
+	      std::cout << "error: missing type" << std::endl;;
+	      PrintUsage( argv[ 0], filename_default, radius_default);
+	      return 0;
+	    }
+	  }
+	}
+      } else {
+	if ( !has_filename) {
+	  filename = argv[ idx_arg ];
+	  has_filename = true;
+	}
+	radius = atof( argv[ idx_arg ] ) / 1000000;
+	break; // the last argument is the radius if present
+      }
     }
-    filename = argv[ 1 ];
-    if ( arg == 3 ) {
-      radius = atof( argv[ 2 ] ) / 1000000;
-    }
+  }
+
+  if ( !FileExists( filename)) {
+    std::cout << "File '" << filename << "' can not be accessed." << std::endl;
+    PrintUsage( argv[ 0], filename_default, radius_default);
+    return 0;
   }
 
   RunPointSearchComparison( filename, radius );

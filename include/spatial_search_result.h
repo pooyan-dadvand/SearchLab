@@ -1,3 +1,4 @@
+/* -*- c++ -*- */
 #pragma once
 
 #include "global_pointer.h"
