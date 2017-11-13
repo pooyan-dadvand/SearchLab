@@ -62,6 +62,9 @@ public:
       result *= mNumberOfCells[ i_dim - 1 ];
     }
     result += CalculatePosition( ThePoint[ 0 ], 0 );
+    // std::cout << "CalculateCellIndex: cell index for point "
+    // 	      << ThePoint[ 0] << " " << ThePoint[ 1] << " " << ThePoint[ 2]
+    // 	      << " is " << result << std::endl;
     return result;
   }
 
@@ -71,8 +74,13 @@ public:
     distance = ( distance < 0.00 ) ? 0.00 : distance;
     std::size_t position =
         static_cast< std::size_t >( distance * mInverseOfCellSize[ ThisDimension ] );
-    return ( position > mNumberOfCells[ ThisDimension ] - 1 ) ? mNumberOfCells[ ThisDimension ] - 1
-                                                              : position;
+    std::size_t result= ( position > mNumberOfCells[ ThisDimension ] - 1 )
+                            ? mNumberOfCells[ ThisDimension ] - 1
+                            : position;
+    // std::cout << "CalculatePosition: cell index for Coordinate "
+    // 	      << Coordinate << " in Dimension " << ThisDimension
+    // 	      << " is " << result << std::endl;
+    return result;
   }
 
   void PrintStatistics() const;

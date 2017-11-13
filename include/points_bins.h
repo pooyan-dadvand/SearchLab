@@ -84,23 +84,29 @@ public:
       InternalPointType min_point;
       std::array< std::size_t, Dimension > length;
       // const double radius2 = radius * radius;
-
+      // std::cout << " ... index search point = " << mCells.CalculateCellIndex( ThePoint) << std::endl;
+      // std::cout << " ... index search point( 0) = " << mCells.CalculatePosition( ThePoint[ 0 ], 0) << std::endl;
+      // std::cout << " ... index search point( 1) = " << mCells.CalculatePosition( ThePoint[ 1 ], 1) << std::endl;
+      // std::cout << " ... index search point( 2) = " << mCells.CalculatePosition( ThePoint[ 2 ], 2) << std::endl;
       for ( int i = 0; i < Dimension; i++ ) {
         min_point[ i ] = ThePoint[ i ] - radius;
         length[ i ] = mCells.CalculatePosition( ThePoint[ i ] + radius, i ) -
                       mCells.CalculatePosition( ThePoint[ i ] - radius, i ) + 1;
       }
+      // std::cout << " ... length = " << length[ 0] << " " << length[ 1] << " " << length[ 2] << std::endl;
       auto min_cell = mCells.CalculateCellIndex( min_point );
 
       for ( std::size_t i_z = 0; i_z < length[ 2 ]; i_z++ ) {
         auto y_position =
             min_cell + i_z * mCells.GetNumberOfCells( 0 ) * mCells.GetNumberOfCells( 1 );
         for ( std::size_t i_y = 0; i_y < length[ 1 ]; i_y++ ) {
+	  // std::cout << " ... testing cell = " << y_position << std::endl;
           std::size_t offset = mCells.GetCellBeginIndex( y_position );
           const std::size_t end_offset = mCells.GetCellBeginIndex( y_position + length[ 0 ] );
           TObjectType **p_point = mpPoints + mCells.GetCellBeginIndex( y_position );
           for ( ; offset < end_offset; offset++ ) {
             double distance_2 = Distance2( **p_point, ThePoint );
+	    // std::cout << " ... looking into point # " << ( *p_point)->id << std::endl;
             if ( distance_2 < current_result.GetDistance2() ) {
               current_result.Set( *p_point );
               current_result.SetDistance2( distance_2 );
@@ -112,6 +118,8 @@ public:
       }
       radius *= 2.00;
     }
+    // std::cout << " ... result = " << ( *current_result.Get()) << std::endl;
+    // exit( 1);
     return current_result;
   }
 

@@ -9,14 +9,20 @@
 class BinsCellsContainerHash {
   static constexpr int Dimension = 3;
 
+  using t_Offset = std::size_t;
+  typedef struct {
+    t_Offset offset_ini, offset_end;
+  } t_CellContents;
+  
 protected:
   std::array< std::size_t, Dimension > mNumberOfCells;
   using InternalPointType = std::array< double, Dimension >;
   BoundingBox< InternalPointType > mBoundingBox;
   InternalPointType mCellSize;
   InternalPointType mInverseOfCellSize;
-  ParallelCoherentHash< std::size_t, std::size_t> m_PCHCellsBeginIndices;
-  std::size_t m_numCells, m_numUsedCells;
+  ParallelCoherentHash< t_CellContents, std::size_t> m_PCHCellsBeginIndices;
+  std::size_t m_numCells; // = # cells of the full grid
+  std::size_t m_numUsedCells;
   
 public:
   template < typename TIteratorType >
@@ -33,28 +39,33 @@ public:
     InitializeCellsBeginIndices( PointsBegin, PointsEnd );
   }
 
-  void SetNumberOfCells( std::array< std::size_t, Dimension > const &TheNumberOfCells ) {
-    mNumberOfCells = TheNumberOfCells;
-  }
-
-  void SetNumberOfCells( std::size_t Axis, std::size_t TheNumberOfCells ) {
-    mNumberOfCells[ Axis ] = TheNumberOfCells;
-  }
-
-  void SetCellBeginIndex( std::size_t Index, std::size_t Value ) {
-    m_PCHCellsBeginIndices.getDataRef( Index ) = Value;
-  }
-
   std::size_t GetNumberOfCells( std::size_t Axis ) const { return mNumberOfCells[ Axis ]; }
-
   std::size_t GetTotalNumberOfCells() const { return m_numCells;}
   std::size_t GetNumberOfUsedCells() const { return m_numUsedCells;}
 
   double GetCellSize( std::size_t Axis ) const { return mCellSize[ Axis ]; }
 
-  std::size_t GetCellBeginIndex( std::size_t Index ) const { 
-      return m_PCHCellsBeginIndices.getData( Index);
+  std::size_t GetCellBeginIndex( std::size_t Index ) const {
+    bool found = false;
+    std::size_t ret = m_PCHCellsBeginIndices.getData( Index, found).offset_ini;
+    if ( !found)
+      ret = ( std::size_t)-1;
+    return ret;
   }
+
+  std::size_t GetCellEndIndex( std::size_t Index ) const { 
+    bool found = false;
+    std::size_t ret = m_PCHCellsBeginIndices.getData( Index, found).offset_end;
+    if ( !found)
+      ret = ( std::size_t)-1;
+    return ret;
+  }
+  bool CellIsEmpty( std::size_t Index ) const {
+    bool found = false;
+    m_PCHCellsBeginIndices.getData( Index, found).offset_end;
+    return found;
+  }
+  bool CellIsNotEmpty( std::size_t Index ) const { return !CellIsEmpty( Index);}
 
   template < typename TPointType >
   std::size_t CalculateCellIndex( TPointType const &ThePoint ) const {
@@ -64,6 +75,9 @@ public:
       result *= mNumberOfCells[ i_dim - 1 ];
     }
     result += CalculatePosition( ThePoint[ 0 ], 0 );
+    // std::cout << "CalculateCellIndex: cell index for point "
+    // 	      << ThePoint[ 0] << " " << ThePoint[ 1] << " " << ThePoint[ 2]
+    // 	      << " is " << result << std::endl;
     return result;
   }
 
@@ -73,14 +87,28 @@ public:
     distance = ( distance < 0.00 ) ? 0.00 : distance;
     std::size_t position =
         static_cast< std::size_t >( distance * mInverseOfCellSize[ ThisDimension ] );
-    return ( position > mNumberOfCells[ ThisDimension ] - 1 ) ? mNumberOfCells[ ThisDimension ] - 1
-                                                              : position;
+    std::size_t result = ( position > mNumberOfCells[ ThisDimension ] - 1 )
+                             ? mNumberOfCells[ ThisDimension ] - 1
+                             : position;
+    // std::cout << "CalculatePosition: cell index for Coordinate "
+    // 	      << Coordinate << " in Dimension " << ThisDimension
+    // 	      << " is " << result << std::endl;
+    return result;
   }
 
   void PrintStatistics() const;
   void PrintStatisticsHash() const;
   
 private:
+  void SetNumberOfCells( std::array< std::size_t, Dimension > const &TheNumberOfCells ) {
+    mNumberOfCells = TheNumberOfCells;
+  }
+  void SetNumberOfCells( std::size_t Axis, std::size_t TheNumberOfCells ) {
+    mNumberOfCells[ Axis ] = TheNumberOfCells;
+  }
+  // void SetCellBeginIndex( std::size_t Index, std::size_t Value ) {
+  //   m_PCHCellsBeginIndices.getDataRef( Index ) = Value;
+  // }
   void CalculateCellSize( std::size_t ApproximatedSize ) {
     std::size_t avarage_number_of_cells = static_cast< std::size_t >(
         std::pow( static_cast< double >( ApproximatedSize ), 1.00 / Dimension ) );
@@ -98,7 +126,7 @@ private:
     }
 
     for ( int i = 0; i < Dimension; i++ ) {
-      SetNumberOfCells( i, static_cast< std::size_t >( lengths[ i] / avarage_length * ( double)avarage_number_of_cells) + 1);
+      SetNumberOfCells( i, static_cast< std::size_t >( lengths[ i] / avarage_length * ( double)avarage_number_of_cells + 1));
       if ( mNumberOfCells[ i ] > 1 )
         mCellSize[ i ] = lengths[ i ] / ( double)mNumberOfCells[ i ];
       else
@@ -112,19 +140,19 @@ protected:
   template < typename TIteratorType >
   void InitializeCellsBeginIndices( TIteratorType const &PointsBegin,
                                     TIteratorType const &PointsEnd ) {
-    m_numCells = mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ] * mNumberOfCells[ 2 ] + 1;
+    m_numCells = mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ] * mNumberOfCells[ 2 ];
     
     // first we need to calculate the number of used cells
     std::unordered_set< size_t> setUsedIndices;
     for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
-      std::size_t idx = CalculateCellIndex( *i_point ) + 1;
+      std::size_t idx = CalculateCellIndex( *i_point );
       setUsedIndices.insert( idx);
     }
     m_numUsedCells = setUsedIndices.size(); // number of unique cells
-    m_PCHCellsBeginIndices.resize( m_numUsedCells, 0);
+    m_PCHCellsBeginIndices.resize( m_numUsedCells, { 0, 0});
     for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
-      std::size_t idx = CalculateCellIndex( *i_point ) + 1;
-      m_PCHCellsBeginIndices.getDataRef( idx )++;
+      std::size_t idx = CalculateCellIndex( *i_point );
+      m_PCHCellsBeginIndices.getDataRef( idx ).offset_end++;
     }
     
     bool first_time = true;
@@ -138,7 +166,8 @@ protected:
 	first_time = false;
 	continue;
       }
-      m_PCHCellsBeginIndices.getDataRef( idx) += m_PCHCellsBeginIndices.getData( last_idx);
+      m_PCHCellsBeginIndices.getDataRef( idx).offset_ini = m_PCHCellsBeginIndices.getData( last_idx).offset_end;
+      m_PCHCellsBeginIndices.getDataRef( idx).offset_end += m_PCHCellsBeginIndices.getData( last_idx).offset_end;
       last_idx = idx;
     }
   }
@@ -147,23 +176,14 @@ protected:
 inline void BinsCellsContainerHash::PrintStatisticsHash() const {
     m_PCHCellsBeginIndices.PrintStatistics();
     std::size_t numUsedCells = 0;
-    std::size_t lastOffset = 0;
     std::size_t totNumPoints = 0;
     std::size_t minNumPoints = this->GetTotalNumberOfCells(); // a big number like any other...
     std::size_t maxNumPoints = 0;
     std::size_t numCellsWithSinglePoint = 0;
-    std::size_t last_idx = 0;
-    bool first_time = true;
-    for ( std::size_t idx = 1; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
+    for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
       if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
-	if ( first_time) {
-	  last_idx = idx;
-	  first_time = false;
-	  continue;
-	}
-	lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx );
-	std::size_t numberOfPoints = lastOffset - m_PCHCellsBeginIndices.getRawEntryData( last_idx );
-	last_idx = idx;
+	std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
+	std::size_t numberOfPoints = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_end - lastOffset;
 	if ( numberOfPoints != 0 ) {
 	  numUsedCells++;
 	  totNumPoints += numberOfPoints;
@@ -174,6 +194,15 @@ inline void BinsCellsContainerHash::PrintStatisticsHash() const {
 	}
       }
     }
+    // std::cout << "Used cells = ";
+    // for ( std::size_t idx = 0; idx < m_numCells; idx++) {
+    //   bool found = false;
+    //   m_PCHCellsBeginIndices.getData( idx, found);
+    //   if ( found) {
+    // 	std::cout << idx << " ";
+    //   }
+    // }
+    // std::cout << std::endl;
     // the last this->GetTotalNumberOfCells() is already the total number of points...
     
     double occupancy_percent =
@@ -186,18 +215,10 @@ inline void BinsCellsContainerHash::PrintStatisticsHash() const {
 
     std::cout << "Number of cells with only one point = " << numCellsWithSinglePoint << std::endl;
     IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
-    last_idx = 0;
-    first_time = true;
-    for ( std::size_t idx = 1; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
+    for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
       if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
-	if ( first_time) {
-	  last_idx = idx;
-	  first_time = false;
-	  continue;
-	}
-	lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx );
-	std::size_t numberOfPoints = lastOffset - m_PCHCellsBeginIndices.getRawEntryData( last_idx );
-	last_idx = idx;
+	std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
+	std::size_t numberOfPoints = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_end - lastOffset;
 	if ( numberOfPoints != 0 ) {
 	  ic.countSample( ( double )numberOfPoints );
 	}

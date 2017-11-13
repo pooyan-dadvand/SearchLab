@@ -24,6 +24,11 @@ namespace PointsNew {
 
     // Header of timmings
     if ( first_time ) {
+      std::locale prev_loc = std::cout.getloc();
+      std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
+      std::cout << "Doing " << numsearch << " searches in radius and " << std::endl;
+      std::cout << "doing " << numsearch_nearest << " nearest searches." << std::endl;
+      std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
       std::cout << "SS\t\tGEN\tSIROMP\tSIRSER\tSNPOMP\tSNPSER\tNOFR\tNP" << std::endl;
       first_time = false;
     }
@@ -64,7 +69,7 @@ namespace PointsNew {
       nearest_point_result = bins.SearchNearest( search_point );
     }
     t1 = GetCurrentTime();
-    std::cout << t1 - t0 << "\t" << results.size() << "\t" << *nearest_point_result.Get();
+    std::cout << t1 - t0 << "\t" << results.size() << "\t" << *( nearest_point_result.Get());
     std::cout << std::endl;
   }
 }
