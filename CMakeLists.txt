@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.2)
+#cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 2.8)
 
 # Project
 project (SearchLab)
@@ -40,11 +41,10 @@ if(CXX11_COMPILER)
   # Warnings
   set ( WARN_FLAGS "")
   if ( CMAKE_COMPILER_IS_GNUCXX)
-    set( WARN_FLAGS "-Wreturn-type -Wswitch -Wformat \
-	-Wcast-align -Wconversion -Wcomment \
-	-Wmissing-braces \
-	-Wno-long-long  -Wno-variadic-macros \
-	-Wno-char-subscripts -pedantic -Wextra -Wall -Wno-ignored-qualifiers")
+    set( WARN_FLAGS "-Wreturn-type -Wswitch -Wformat")
+    set( WARN_FLAGS "${WARN_FLAGS} -Wcast-align -Wconversion -Wcomment -Wmissing-braces")
+    set( WARN_FLAGS "${WARN_FLAGS} -Wno-long-long -Wno-variadic-macros -Wno-char-subscripts  -Wno-ignored-qualifiers")
+    set( WARN_FLAGS "${WARN_FLAGS} -pedantic -Wextra -Wall")
   endif ( CMAKE_COMPILER_IS_GNUCXX)
   if ( MSVC)
     set( WARN_FLAGS "/W4")
