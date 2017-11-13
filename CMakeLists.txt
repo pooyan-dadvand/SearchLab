@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 
 # Project
-project (SarchLab)
+project (SearchLab)
 
 # thanks to https://github.com/nathan-osman/CXX11-CMake-Macros
 include(${CMAKE_SOURCE_DIR}/CXX11.cmake)
@@ -12,8 +12,13 @@ set( USE_MPI OFF CACHE BOOL "Use MPI implementation")
 
 # for Windows
 if (WIN32)
-  set( ZLIB_ROOT "C:/GID64-git/libZ/windows")
-  # set( ZLIB_ROOT "C:/GID64-git/libZ/zlib-1.2.11")
+  if ( EXISTS C:/GID64-git/libZ/zlib-1.2.11)
+    set( ZLIB_ROOT "C:/GID64-git/libZ/zlib-1.2.11")
+  elseif ( EXISTS C:/GID64-git/libZ/windows)
+    set( ZLIB_ROOT "C:/GID64-git/libZ/windows")
+  else( EXISTS C:/GID64-git/libZ/windows)
+    message( "ZLIB: trying to guess Zlib location")
+  endif( EXISTS C:/GID64-git/libZ/zlib-1.2.11)
 endif (WIN32)
 
 find_package(ZLIB REQUIRED)
