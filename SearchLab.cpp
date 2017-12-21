@@ -27,6 +27,16 @@
 #include "parallel_coherent_hash.h"
 
 bool G_UsePointsBinsHash = false;
+bool G_PrintBinsStatistics = false;
+#ifdef NDEBUG
+// i.e. compiling without assert, i.e. release mode
+std::size_t G_NumberOfRepetitions = 1000000;
+#else // NDEBUG
+// compiling with asserts, i.e. debug mode
+std::size_t G_NumberOfRepetitions = 1000;
+#endif // NDEBUG
+
+std::size_t G_GridSize[ 3] = { 0, 0, 0};
 
 inline bool FileExists( const std::string &file_name) {
   // from https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
@@ -120,29 +130,26 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   Point &search_point = mid_point;
   SphereObject< 3 > &search_object = mid_object;
 
-#ifdef NDEBUG
-  // i.e. compiling without assert, i.e. release mode
-  std::size_t numsearch = 1000000;
-  std::size_t numsearch_nearest = numsearch * 10;
-#else
-  // compiling with asserts, i.e. debug mode
-  std::size_t numsearch = 1000;
-  std::size_t numsearch_nearest = numsearch * 10;
-#endif
+  std::size_t numrepetitions = G_NumberOfRepetitions;
+  std::size_t numrepetitions_nearest = numrepetitions * 10;
 
-  std::cout << " min point : " << min_point << std::endl;
-  std::cout << " max point : " << max_point << std::endl;
-  std::cout << " search_point : " << search_point << std::endl;
-  std::cout << " search radius : " << Radius << std::endl;
-  std::cout << std::endl;
-
+  std::locale prev_loc = std::cout.getloc();
+  std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
+  if ( G_PrintBinsStatistics) {
+    std::cout << " min point : " << min_point << std::endl;
+    std::cout << " max point : " << max_point << std::endl;
+    std::cout << " search_point : " << search_point << std::endl;
+    std::cout << " search radius : " << Radius << std::endl;
+    std::cout << std::endl;
+  }
   std::cout << " Number of Points : " << npoints << std::endl;
-  std::cout << " Number of Repetitions : " << numsearch << std::endl;
+  std::cout << " Number of Repetitions : " << numrepetitions << std::endl;
   std::cout << std::endl;
+  std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
 
   // Data Setup
-  Point *allPoints = new Point[ numsearch ];
-  SphereObject< 3 > *allSpheres = new SphereObject< 3 >[ numsearch ];
+  Point *allPoints = new Point[ numrepetitions ];
+  SphereObject< 3 > *allSpheres = new SphereObject< 3 >[ numrepetitions ];
 
   std::size_t max_results = npoints;
   for ( std::size_t i = 0; i < 1; i++ ) {
@@ -171,27 +178,29 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   if ( !G_UsePointsBinsHash) {
     std::cout << "Using PointsBins" << std::endl;
     PointsNew::RunTests< PointsBins< Point > >( "PointBins", points_vector, search_point, Radius,
-						numsearch, numsearch_nearest );
+						numrepetitions, numrepetitions_nearest,
+						G_GridSize, G_PrintBinsStatistics);
   } else {
     std::cout << "Using PointsHash" << std::endl;
     PointsNew::RunTests< PointsBinsHash< Point > >( "PointBinsHash", points_vector, search_point, Radius,
-						    numsearch, numsearch_nearest );
+						    numrepetitions, numrepetitions_nearest,
+						    G_GridSize, G_PrintBinsStatistics );
   }
 
 // - Old Interface
 #ifdef USE_KRATOS
   PointsOld::RunTests< Containers::BinsStaticType >( "StaticBins", points, points + npoints,
                                                      p_results, resultDistances.begin(),
-                                                     max_results, allPoints, Radius, numsearch, 1 );
+                                                     max_results, allPoints, Radius, numrepetitions, 1 );
   PointsOld::RunTests< Containers::BinsDynamicType >(
       "DynamicBins", points, points + npoints, p_results, resultDistances.begin(), max_results,
-      allPoints, Radius, numsearch, 1 );
+      allPoints, Radius, numrepetitions, 1 );
   PointsOld::RunTests< Containers::OctreeType >( "OctTree\t", points, points + npoints, p_results,
                                                  resultDistances.begin(), max_results, allPoints,
-                                                 Radius, numsearch, 10 );
+                                                 Radius, numrepetitions, 10 );
   PointsOld::RunTests< Containers::BinsDynamicOctreeType >(
       "OcTreeDynamic\t", points, points + npoints, p_results, resultDistances.begin(), max_results,
-      allPoints, Radius, numsearch, 10 );
+      allPoints, Radius, numrepetitions, 10 );
 #endif
 
 // Object Interfaces
@@ -202,10 +211,10 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
 #ifdef USE_KRATOS
   ObjectsOld::RunTests< Containers::BinsObjectStaticType >(
       "StaticObjects", objects.begin(), objects.end(), objectResults.begin(),
-      resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1 );
+      resultDistances.begin(), max_results, allSpheres, Radius, numrepetitions, 1 );
   ObjectsOld::RunTests< Containers::BinsObjectDynamicType >(
       "DynamicObjects", objects.begin(), objects.end(), objectResults.begin(),
-      resultDistances.begin(), max_results, allSpheres, Radius, numsearch, 1 );
+      resultDistances.begin(), max_results, allSpheres, Radius, numrepetitions, 1 );
 #endif
   // RunTestsOldInterface<BinsObjectDynamicType>
   return 0;
@@ -229,10 +238,13 @@ void testParallelCoherentHash() {
 }
 
 void PrintUsage( const std::string &progname, const std::string &filename, double radius) {
-  std::cout << "Usage: " << progname << " [ -type bin/hash] [ filename [ radius ] ]" << std::endl;
+  std::cout << "Usage: " << progname << " [ -type bin/hash] [ -num num_repetitions] [ -grid XxYxZ] [ -statistics] [ filename [ radius ] ]" << std::endl;
   std::cout << "       filename default value = " << filename << std::endl;
   std::cout << "       radius default value   = " << radius << std::endl;
   std::cout << "       type default value = " << ( G_UsePointsBinsHash ? "hash" : "bin") << std::endl;
+  std::cout << "       num_repetitions default value = " << G_NumberOfRepetitions << std::endl;
+  std::cout << "       grid size (XxYxZ) default depends on number of points" << std::endl;
+  std::cout << "       statistics default value is off" << std::endl;
 }
 
 int main( int argc, char *argv[] ) {
@@ -260,26 +272,61 @@ int main( int argc, char *argv[] ) {
 	if ( !strncasecmp( argv[ idx_arg ], "-h", 2 ) || !strncasecmp( argv[ idx_arg ], "--h", 3 ) ) {
 	  PrintUsage( argv[ 0], filename_default, radius_default);
 	  return 0;
-	} else {
-	  if ( !strncasecmp( argv[ idx_arg ], "-t", 2 ) || !strncasecmp( argv[ idx_arg ], "--t", 3 ) ) {
-	    std::string error_msg;
-	    if ( idx_arg + 1 < argc) {
-	      idx_arg++;
-	      if ( !strncasecmp( argv[ idx_arg ], "b", 1 ) || !strcasecmp( argv[ idx_arg ], "bin") ) {
-		G_UsePointsBinsHash = false;
-	      } else if ( !strncasecmp( argv[ idx_arg ], "h", 1 ) || !strcasecmp( argv[ idx_arg ], "hash" ) ) {
-		G_UsePointsBinsHash = true;
-	      } else {
-		std::cout << "error: unknown type: " << argv[ idx_arg] << std::endl;;
-		PrintUsage( argv[ 0], filename_default, radius_default);
-		return 0;
-	      }
+	} else if ( !strncasecmp( argv[ idx_arg ], "-t", 2 ) || !strncasecmp( argv[ idx_arg ], "--t", 3 ) ) {
+	  if ( idx_arg + 1 < argc) {
+	    idx_arg++;
+	    if ( !strncasecmp( argv[ idx_arg ], "b", 1 ) || !strcasecmp( argv[ idx_arg ], "bin") ) {
+	      G_UsePointsBinsHash = false;
+	    } else if ( !strncasecmp( argv[ idx_arg ], "h", 1 ) || !strcasecmp( argv[ idx_arg ], "hash" ) ) {
+	      G_UsePointsBinsHash = true;
 	    } else {
-	      std::cout << "error: missing type" << std::endl;;
+	      std::cout << "error: unknown type: " << argv[ idx_arg] << std::endl;;
 	      PrintUsage( argv[ 0], filename_default, radius_default);
 	      return 0;
 	    }
+	  } else {
+	    std::cout << "error: missing type" << std::endl;;
+	    PrintUsage( argv[ 0], filename_default, radius_default);
+	    return 0;
 	  }
+	} else if ( !strncasecmp( argv[ idx_arg ], "-n", 2 ) || !strncasecmp( argv[ idx_arg ], "--n", 3 ) ) {
+	  if ( idx_arg + 1 < argc) {
+	    idx_arg++;
+	    size_t numrepetitions = 0;
+	    if ( sscanf( argv[ idx_arg], "%zu", &numrepetitions) == 1) {
+	      G_NumberOfRepetitions = numrepetitions;
+	    } else {
+	      std::cout << "error: unknown number of searches: " << argv[ idx_arg] << std::endl;;
+	      PrintUsage( argv[ 0], filename_default, radius_default);
+	      return 0;
+	    }
+	  } else {
+	    std::cout << "error: missing number of searches" << std::endl;;
+	    PrintUsage( argv[ 0], filename_default, radius_default);
+	    return 0;
+	  }
+	} else if ( !strncasecmp( argv[ idx_arg ], "-g", 2 ) || !strncasecmp( argv[ idx_arg ], "--g", 3 ) ) {
+	  if ( idx_arg + 1 < argc) {
+	    idx_arg++;
+	    size_t grid_size_x = 0;
+	    size_t grid_size_y = 0;
+	    size_t grid_size_z = 0;
+	    if ( sscanf( argv[ idx_arg], "%zux%zux%zu", &grid_size_x, &grid_size_y, &grid_size_z) == 3) {
+	      G_GridSize[ 0] = grid_size_x;
+	      G_GridSize[ 1] = grid_size_y;
+	      G_GridSize[ 2] = grid_size_z;
+	    } else {
+	      std::cout << "error: unknown grid sizes (XxYxZ): " << argv[ idx_arg] << std::endl;;
+	      PrintUsage( argv[ 0], filename_default, radius_default);
+	      return 0;
+	    }
+	  } else {
+	    std::cout << "error: missing grid sizes (XxYxZ)" << std::endl;;
+	    PrintUsage( argv[ 0], filename_default, radius_default);
+	    return 0;
+	  }
+	} else if ( !strncasecmp( argv[ idx_arg ], "-s", 2 ) || !strncasecmp( argv[ idx_arg ], "--s", 3 ) ) {
+	  G_PrintBinsStatistics  = true;
 	}
       } else {
 	if ( !has_filename) {
@@ -309,3 +356,5 @@ int main( int argc, char *argv[] ) {
 
   return 0;
 }
+
+// #include "clock.cc"

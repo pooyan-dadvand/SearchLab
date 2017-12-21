@@ -22,8 +22,9 @@ public:
   using ResultType = SpatialSearchResult< TObjectType >;
 
   template < typename TIteratorType >
-  PointsBins( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
-    : mCells( PointsBegin, PointsEnd ) {
+  PointsBins( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+	      const std::size_t GridSize[ 3] )
+    : mCells( PointsBegin, PointsEnd, GridSize ) {
     mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
 
     if ( mNumberOfPoints == 0 ) {

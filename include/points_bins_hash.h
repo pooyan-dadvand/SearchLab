@@ -22,15 +22,15 @@ public:
   using ResultType = SpatialSearchResult< TObjectType >;
 
   template < typename TIteratorType >
-  PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
-    : mCells( PointsBegin, PointsEnd ) {
+  PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+		  const std::size_t GridSize[ 3] )
+    : mCells( PointsBegin, PointsEnd, GridSize ) {
     mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
 
     if ( mNumberOfPoints == 0 ) {
       mpPoints = nullptr;
       return;
     }
-
     mpPoints = new PointerType[ mNumberOfPoints ];
     for ( std::size_t i = 0; i < mNumberOfPoints; i++ )
       mpPoints[ i ] = nullptr;
@@ -55,10 +55,11 @@ public:
       auto y_position =
           min_cell + i_z * mCells.GetNumberOfCells( 0 ) * mCells.GetNumberOfCells( 1 );
       for ( std::size_t i_y = 0; i_y < length[ 1 ]; i_y++ ) {
-	std::size_t offset = mCells.GetCellBeginIndex( y_position );
-	// const std::size_t end_offset = mCells.GetCellBeginIndex( y_position + length[ 0 ] );
-	const std::size_t end_offset = mCells.GetCellEndIndex( y_position);
-	TObjectType **p_point = mpPoints + offset;//mCells.GetCellBeginIndex( y_position );
+	std::size_t offset, end_offset;
+	bool found = mCells.GetCellIndices( y_position, offset, end_offset);
+	if ( !found) continue;
+
+	TObjectType **p_point = mpPoints + offset;
 	for ( ; offset < end_offset; offset++ ) {
 	  if ( Distance2( **p_point, ThePoint ) <= radius2e ) {
 	    rResults.push_back( ResultType( *p_point ) );
@@ -104,8 +105,10 @@ public:
 	  for ( std::size_t i_x = 0; i_x < length[ 2 ]; i_x++) {
 	    auto x_position = y_position + i_x;
 	    // std::cout << " ... testing cell = " << x_position << std::endl;
-	    std::size_t offset = mCells.GetCellBeginIndex( x_position );
-	    const std::size_t end_offset = mCells.GetCellEndIndex( x_position); // mCells.GetCellBeginIndex( y_position + length[ 0 ] );
+	    std::size_t offset, end_offset;
+	    bool found = mCells.GetCellIndices( x_position, offset, end_offset);
+	    if ( !found) continue;
+
 	    TObjectType **p_point = mpPoints + offset;//mCells.GetCellBeginIndex( y_position );
 	    for ( ; offset < end_offset; offset++ ) {
 	      double distance_2 = Distance2( **p_point, ThePoint );
@@ -122,6 +125,7 @@ public:
       } // for i_z
       radius *= 2.00;
     }
+
     // std::cout << " ... result = " << ( *current_result.Get()) << std::endl;
     // exit( 1);
     return current_result;
@@ -141,8 +145,11 @@ private:
   void AssignPointsToCells( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd ) {
     for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
       auto index = mCells.CalculateCellIndex( *i_point );
-      for ( std::size_t offset = mCells.GetCellBeginIndex( index );
-            offset < mCells.GetCellEndIndex( index ); offset++ ) {
+
+      std::size_t offset_begin, offset_end;
+      bool found = mCells.GetCellIndices( index, offset_begin, offset_end);
+      if ( !found) continue;
+      for ( std::size_t offset = offset_begin; offset < offset_end; offset++) {
         if ( mpPoints[ offset ] == nullptr ) {
           mpPoints[ offset ] = &( *i_point );
           break;
@@ -153,8 +160,11 @@ private:
 
   void SearchNearestInCell( std::size_t CellIndex, TObjectType const &ThePoint,
                             ResultType &rCurrentResult ) {
-    for ( std::size_t offset = mCells.GetCellBeginIndex( CellIndex );
-          offset < mCells.GetCellEndIndex( CellIndex ); offset++ ) {
+    std::size_t offset_begin, offset_end;
+    bool found = mCells.GetCellIndices( CellIndex, offset_begin, offset_end);
+    if ( !found)
+      return;
+    for ( std::size_t offset = offset_begin; offset < offset_end; offset++ ) {
       TObjectType *p_point = mpPoints[ offset ];
       auto distance_2 = Distance2( *p_point, ThePoint );
       if ( distance_2 <= rCurrentResult.GetDistance2() ) {

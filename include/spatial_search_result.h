@@ -18,9 +18,9 @@ public:
 			mIsObjectFound = true;
 	}
 
-	SpatialSearchResult(SpatialSearchResult const& Other) = default;
+	SpatialSearchResult(SpatialSearchResult const& /* Other */) = default;
 
-	SpatialSearchResult(SpatialSearchResult&& Other) = default;
+	SpatialSearchResult(SpatialSearchResult&& /* Other */) = default;
 
 	TPointerType Get() { return mpObject; }
 	TPointerType const Get() const { return mpObject; }
@@ -44,6 +44,6 @@ public:
 		mIsDistanceCalculated = false;
 	}
 
-	SpatialSearchResult& operator=(SpatialSearchResult const& Other) = default;
+        SpatialSearchResult& operator=(SpatialSearchResult const& /*Other*/) = default;
 
 };

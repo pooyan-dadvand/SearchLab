@@ -2,6 +2,7 @@
 #pragma once
 
 #include <unordered_set>
+#include <algorithm>
 #include "bounding_box.h"
 #include "interval_count.h"
 #include "parallel_coherent_hash.h"
@@ -26,7 +27,8 @@ protected:
   
 public:
   template < typename TIteratorType >
-  BinsCellsContainerHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
+  BinsCellsContainerHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+			  const std::size_t GridSize[ 3] )
     : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ), m_numCells( 0), m_numUsedCells( 0) {
     
     std::size_t approximated_number_of_cells = std::distance( PointsBegin, PointsEnd );
@@ -34,7 +36,7 @@ public:
     if ( approximated_number_of_cells == 0 )
       return;
 
-    CalculateCellSize( approximated_number_of_cells );
+    CalculateCellSize( approximated_number_of_cells, GridSize );
 
     InitializeCellsBeginIndices( PointsBegin, PointsEnd );
   }
@@ -45,24 +47,37 @@ public:
 
   double GetCellSize( std::size_t Axis ) const { return mCellSize[ Axis ]; }
 
-  std::size_t GetCellBeginIndex( std::size_t Index ) const {
+  // std::size_t GetCellBeginIndex( std::size_t Index ) const {
+  //   bool found = false;
+  //   std::size_t ret = m_PCHCellsBeginIndices.getData( Index, found).offset_ini;
+  //   if ( !found)
+  //     ret = ( std::size_t)-1;
+  //   return ret;
+  // }
+  // 
+  // std::size_t GetCellEndIndex( std::size_t Index ) const { 
+  //   bool found = false;
+  //   std::size_t ret = m_PCHCellsBeginIndices.getData( Index, found).offset_end;
+  //   if ( !found)
+  //     ret = ( std::size_t)-1;
+  //   return ret;
+  // }
+
+  bool GetCellIndices( std::size_t Index, std::size_t &begin, std::size_t &end) {
     bool found = false;
-    std::size_t ret = m_PCHCellsBeginIndices.getData( Index, found).offset_ini;
-    if ( !found)
-      ret = ( std::size_t)-1;
-    return ret;
+    // t_CellContents ret = m_PCHCellsBeginIndices.getData( Index, found);
+    t_CellContents ret = m_PCHCellsBeginIndices.findDataRef( Index, found);
+    if ( !found) {
+      return false;
+    }
+    begin = ret.offset_ini;
+    end = ret.offset_end;
+    return true;
   }
 
-  std::size_t GetCellEndIndex( std::size_t Index ) const { 
-    bool found = false;
-    std::size_t ret = m_PCHCellsBeginIndices.getData( Index, found).offset_end;
-    if ( !found)
-      ret = ( std::size_t)-1;
-    return ret;
-  }
   bool CellIsEmpty( std::size_t Index ) const {
     bool found = false;
-    m_PCHCellsBeginIndices.getData( Index, found).offset_end;
+    m_PCHCellsBeginIndices.getData( Index, found);
     return found;
   }
   bool CellIsNotEmpty( std::size_t Index ) const { return !CellIsEmpty( Index);}
@@ -109,30 +124,44 @@ private:
   // void SetCellBeginIndex( std::size_t Index, std::size_t Value ) {
   //   m_PCHCellsBeginIndices.getDataRef( Index ) = Value;
   // }
-  void CalculateCellSize( std::size_t ApproximatedSize ) {
-    std::size_t avarage_number_of_cells = static_cast< std::size_t >(
-        std::pow( static_cast< double >( ApproximatedSize ), 1.00 / Dimension ) );
+  void CalculateCellSize( std::size_t ApproximatedSize, const std::size_t GridSize[ 3] ) {
+    double average_length = 0.00;
     std::array< double, 3 > lengths;
-    double avarage_length = 0.00;
     for ( int i = 0; i < Dimension; i++ ) {
       lengths[ i ] = mBoundingBox.GetMaxPoint()[ i ] - mBoundingBox.GetMinPoint()[ i ];
-      avarage_length += lengths[ i ];
+      average_length += lengths[ i ];
     }
-    avarage_length *= 1.00 / 3.00;
+    average_length *= 1.00 / 3.00;
 
-    if ( avarage_length < std::numeric_limits< double >::epsilon() ) {
-      SetNumberOfCells( { { 1, 1, 1 } } );
-      return;
-    }
+    if ( ( GridSize[ 0] == 0) || ( GridSize[ 1] == 0) || ( GridSize[ 2] == 0)) {
+      std::size_t average_number_of_cells = 
+	static_cast< std::size_t >( std::pow( static_cast< double >( ApproximatedSize ), 1.00 / Dimension ) );
 
-    for ( int i = 0; i < Dimension; i++ ) {
-      SetNumberOfCells( i, static_cast< std::size_t >( lengths[ i] / avarage_length * ( double)avarage_number_of_cells + 1));
-      if ( mNumberOfCells[ i ] > 1 )
-        mCellSize[ i ] = lengths[ i ] / ( double)mNumberOfCells[ i ];
-      else
-        mCellSize[ i ] = avarage_length;
+      if ( average_length < std::numeric_limits< double >::epsilon() ) {
+	SetNumberOfCells( { { 1, 1, 1 } } );
+	return;
+      }
+      
+      for ( int i = 0; i < Dimension; i++ ) {
+	SetNumberOfCells( i, static_cast< std::size_t >( lengths[ i] / average_length * ( double)average_number_of_cells + 1));
+	if ( mNumberOfCells[ i ] > 1 )
+	  mCellSize[ i ] = lengths[ i ] / ( double)mNumberOfCells[ i ];
+	else
+	  mCellSize[ i ] = average_length;
+	
+	mInverseOfCellSize[ i ] = 1.00 / mCellSize[ i ];
+      }
 
-      mInverseOfCellSize[ i ] = 1.00 / mCellSize[ i ];
+    } else { // User defined grid size
+      for ( int i = 0; i < Dimension; i++ ) {
+	SetNumberOfCells( i, GridSize[ i]);
+	if ( mNumberOfCells[ i ] > 1 )
+	  mCellSize[ i ] = lengths[ i ] / ( double)mNumberOfCells[ i ];
+	else
+	  mCellSize[ i ] = average_length;
+	
+	mInverseOfCellSize[ i ] = 1.00 / mCellSize[ i ];
+      }
     }
   }
 
@@ -141,7 +170,7 @@ protected:
   void InitializeCellsBeginIndices( TIteratorType const &PointsBegin,
                                     TIteratorType const &PointsEnd ) {
     m_numCells = mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ] * mNumberOfCells[ 2 ];
-    
+
     // first we need to calculate the number of used cells
     std::unordered_set< size_t> setUsedIndices;
     for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
@@ -150,14 +179,24 @@ protected:
     }
     m_numUsedCells = setUsedIndices.size(); // number of unique cells
     m_PCHCellsBeginIndices.resize( m_numUsedCells, { 0, 0});
+
     for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
       std::size_t idx = CalculateCellIndex( *i_point );
       m_PCHCellsBeginIndices.getDataRef( idx ).offset_end++;
     }
+
+    // sort used indices, to avoid loop over all cells: too costly for big grids
+    std::vector< std::size_t> lstUsedIndices;
+    for ( auto it_idx = setUsedIndices.begin(); it_idx != setUsedIndices.end(); it_idx++) {
+      lstUsedIndices.push_back( *it_idx);
+    }
+    std::sort( lstUsedIndices.begin(), lstUsedIndices.end());
     
     bool first_time = true;
     std::size_t last_idx = 0;
-    for ( std::size_t idx = 0; idx < m_numCells; idx++) {
+    // for ( std::size_t idx = 0; idx < m_numCells; idx++) {
+    for ( auto it_idx = lstUsedIndices.begin(); it_idx < lstUsedIndices.end(); it_idx++) {
+      std::size_t idx = *it_idx;
       bool found = false;
       m_PCHCellsBeginIndices.getData( idx, found); // look if cell is there
       if ( !found) continue; // cell not stored 
@@ -166,8 +205,9 @@ protected:
 	first_time = false;
 	continue;
       }
-      m_PCHCellsBeginIndices.getDataRef( idx).offset_ini = m_PCHCellsBeginIndices.getData( last_idx).offset_end;
-      m_PCHCellsBeginIndices.getDataRef( idx).offset_end += m_PCHCellsBeginIndices.getData( last_idx).offset_end;
+      const std::size_t last_offset_end = m_PCHCellsBeginIndices.getData( last_idx).offset_end;
+      m_PCHCellsBeginIndices.getDataRef( idx).offset_ini = last_offset_end;
+      m_PCHCellsBeginIndices.getDataRef( idx).offset_end += last_offset_end;
       last_idx = idx;
     }
   }

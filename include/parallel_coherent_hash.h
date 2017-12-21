@@ -313,7 +313,8 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::PrintStatistics() const
   std::cout << " Used number of elements in hash table = " << count << std::endl;
   std::cout << "Configured load factor = " << LOAD_FACTOR << " vs real load factor = " << ( double)count / ( double)m_Size << std::endl;
   std::cout << "Maximum age = " << ( int)m_TableMaximumAge << std::endl;
-  std::cout << "Total size in bytes = " << sizeof( *this) + sizeHashTable + sizeOffsetTable << std::endl;
+  std::size_t total_size = sizeof( *this) + sizeHashTable + sizeOffsetTable;
+  std::cout << "Total size in bytes = " << total_size << " = " << ( double)total_size / ( 1024.0 * 1024.0) << " MB" << std::endl;
   std::cout.imbue( prev_loc); // restore previous locale, i.e. without thousand separators
   std::cout << "=== End of statistics === \n";
 }
