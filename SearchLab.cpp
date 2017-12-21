@@ -131,7 +131,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   SphereObject< 3 > &search_object = mid_object;
 
   std::size_t numrepetitions = G_NumberOfRepetitions;
-  std::size_t numrepetitions_nearest = numrepetitions; //  * 10;
+  std::size_t numrepetitions_nearest = numrepetitions * 10;
 
   std::locale prev_loc = std::cout.getloc();
   std::cout.imbue( std::locale( "" ) ); // for thousand separators ...

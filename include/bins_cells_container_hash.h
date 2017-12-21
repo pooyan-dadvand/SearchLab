@@ -95,6 +95,20 @@ public:
     return result;
   }
 
+  InternalPointType CalculateCentreOfCell( std::size_t Index ) const {
+    const std::size_t num_xy = mNumberOfCells[ 0] * mNumberOfCells[ 1];
+    const std::size_t idx_z = Index / num_xy;
+    const std::size_t rem =  Index % num_xy;
+    const std::size_t idx_y = rem / mNumberOfCells[ 0];
+    const std::size_t idx_x = rem % mNumberOfCells[ 0];
+    const InternalPointType &min = mBoundingBox.GetMinPoint();
+    InternalPointType centre = { { 
+	( double)idx_x * mCellSize[ 0] + min[ 0], 
+	( double)idx_y * mCellSize[ 1] + min[ 1], 
+	( double)idx_z * mCellSize[ 2] + min[ 2]}};
+    return centre;
+  }
+
   std::size_t CalculatePosition( double Coordinate, int ThisDimension ) const {
     auto distance = Coordinate - mBoundingBox.GetMinPoint()[ ThisDimension ];
     distance = ( distance < 0.00 ) ? 0.00 : distance;
@@ -163,50 +177,55 @@ private:
 protected:
   template < typename TIteratorType >
   void InitializeCellsBeginIndices( TIteratorType const &PointsBegin,
-                                    TIteratorType const &PointsEnd ) {
-    m_numCells = mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ] * mNumberOfCells[ 2 ];
-
-    // first we need to calculate the number of used cells
-    std::unordered_set< size_t> setUsedIndices;
-    for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
-      std::size_t idx = CalculateCellIndex( *i_point );
-      setUsedIndices.insert( idx);
-    }
-    m_numUsedCells = setUsedIndices.size(); // number of unique cells
-    m_PCHCellsBeginIndices.resize( m_numUsedCells, { 0, 0});
-
-    for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
-      std::size_t idx = CalculateCellIndex( *i_point );
-      m_PCHCellsBeginIndices.getDataRef( idx ).offset_end++;
-    }
-
-    // sort used indices, to avoid loop over all cells: too costly for big grids
-    m_lstUsedIndices.clear();
-    for ( auto it_idx = setUsedIndices.begin(); it_idx != setUsedIndices.end(); it_idx++) {
-      m_lstUsedIndices.push_back( *it_idx);
-    }
-    std::sort( m_lstUsedIndices.begin(), m_lstUsedIndices.end());
-    
-    bool first_time = true;
-    std::size_t last_idx = 0;
-    // for ( std::size_t idx = 0; idx < m_numCells; idx++) {
-    for ( auto it_idx = m_lstUsedIndices.begin(); it_idx < m_lstUsedIndices.end(); it_idx++) {
-      std::size_t idx = *it_idx;
-      bool found = false;
-      m_PCHCellsBeginIndices.getData( idx, found); // look if cell is there
-      if ( !found) continue; // cell not stored 
-      if ( first_time) {
-	last_idx = idx;
-	first_time = false;
-	continue;
-      }
-      const std::size_t last_offset_end = m_PCHCellsBeginIndices.getData( last_idx).offset_end;
-      m_PCHCellsBeginIndices.getDataRef( idx).offset_ini = last_offset_end;
-      m_PCHCellsBeginIndices.getDataRef( idx).offset_end += last_offset_end;
-      last_idx = idx;
-    }
-  }
+                                    TIteratorType const &PointsEnd );
 };
+
+
+template < typename TIteratorType >
+inline void BinsCellsContainerHash::InitializeCellsBeginIndices( TIteratorType const &PointsBegin,
+								 TIteratorType const &PointsEnd ) {
+  m_numCells = mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ] * mNumberOfCells[ 2 ];
+  
+  // first we need to calculate the number of used cells
+  std::unordered_set< size_t> setUsedIndices;
+  for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
+    std::size_t idx = CalculateCellIndex( *i_point );
+    setUsedIndices.insert( idx);
+  }
+  m_numUsedCells = setUsedIndices.size(); // number of unique cells
+  m_PCHCellsBeginIndices.resize( m_numUsedCells, { 0, 0});
+  
+  for ( auto i_point = PointsBegin; i_point != PointsEnd; i_point++ ) {
+    std::size_t idx = CalculateCellIndex( *i_point );
+    m_PCHCellsBeginIndices.getDataRef( idx ).offset_end++;
+  }
+  
+  // sort used indices, to avoid loop over all cells: too costly for big grids
+  m_lstUsedIndices.clear();
+  for ( auto it_idx = setUsedIndices.begin(); it_idx != setUsedIndices.end(); it_idx++) {
+    m_lstUsedIndices.push_back( *it_idx);
+  }
+  std::sort( m_lstUsedIndices.begin(), m_lstUsedIndices.end());
+  
+  bool first_time = true;
+  std::size_t last_idx = 0;
+  // for ( std::size_t idx = 0; idx < m_numCells; idx++) {
+  for ( auto it_idx = m_lstUsedIndices.begin(); it_idx < m_lstUsedIndices.end(); it_idx++) {
+    std::size_t idx = *it_idx;
+    bool found = false;
+    m_PCHCellsBeginIndices.getData( idx, found); // look if cell is there
+    if ( !found) continue; // cell not stored 
+    if ( first_time) {
+      last_idx = idx;
+      first_time = false;
+      continue;
+    }
+    const std::size_t last_offset_end = m_PCHCellsBeginIndices.getData( last_idx).offset_end;
+    m_PCHCellsBeginIndices.getDataRef( idx).offset_ini = last_offset_end;
+    m_PCHCellsBeginIndices.getDataRef( idx).offset_end += last_offset_end;
+    last_idx = idx;
+  }
+}
 
 inline void BinsCellsContainerHash::PrintStatisticsHash() const {
     m_PCHCellsBeginIndices.PrintStatistics();

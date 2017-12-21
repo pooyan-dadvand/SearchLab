@@ -72,6 +72,8 @@ public:
   }
 
   ResultType SearchNearest( TObjectType const &ThePoint ) {
+    return this->NewSearchNearest( ThePoint );
+
     // auto cell_index = mCells.CalculateCellIndex(ThePoint);
     ResultType current_result;
 
@@ -104,10 +106,10 @@ public:
 
 	    TObjectType **p_point = mpPoints + offset;//mCells.GetCellBeginIndex( y_position );
 	    for ( ; offset < end_offset; offset++ ) {
-	      double distance_2 = Distance2( **p_point, ThePoint );
-	      if ( distance_2 < current_result.GetDistance2() ) {
+	      double distance2 = Distance2( **p_point, ThePoint );
+	      if ( distance2 < current_result.GetDistance2() ) {
 		current_result.Set( *p_point );
-		current_result.SetDistance2( distance_2 );
+		current_result.SetDistance2( distance2 );
 	      }
 	      p_point++;
 	    }
@@ -116,6 +118,103 @@ public:
         } // for i_y
       } // for i_z
       radius *= 2.00;
+    }
+
+    return current_result;
+  }
+
+  ResultType SearchNearestWithinRadius( TObjectType const &ThePoint, double limit_radius ) {
+    // auto cell_index = mCells.CalculateCellIndex(ThePoint);
+    ResultType current_result;
+
+    if ( mNumberOfPoints == 0 )
+      return current_result;
+
+    current_result.SetDistance2( std::numeric_limits< double >::max() );
+    double radius = std::max( mCells.GetCellSize( 0 ), mCells.GetCellSize( 1 ) );
+    radius = std::max( radius, mCells.GetCellSize( 2 ) ) * .5;
+
+    while ( !current_result.IsObjectFound() && ( radius < limit_radius)) {
+      InternalPointType min_point;
+      std::array< std::size_t, Dimension > length;
+      for ( int i = 0; i < Dimension; i++ ) {
+        min_point[ i ] = ThePoint[ i ] - radius;
+        length[ i ] = mCells.CalculatePosition( ThePoint[ i ] + radius, i ) -
+                      mCells.CalculatePosition( ThePoint[ i ] - radius, i ) + 1;
+      }
+      auto min_cell = mCells.CalculateCellIndex( min_point );
+
+      for ( std::size_t i_z = 0; i_z < length[ 2 ]; i_z++ ) {
+        auto y_position =
+            min_cell + i_z * mCells.GetNumberOfCells( 0 ) * mCells.GetNumberOfCells( 1 );
+        for ( std::size_t i_y = 0; i_y < length[ 1 ]; i_y++ ) {
+	  for ( std::size_t i_x = 0; i_x < length[ 2 ]; i_x++) {
+	    auto x_position = y_position + i_x;
+	    std::size_t offset, end_offset;
+	    bool found = mCells.GetCellStoredOffsets( x_position, offset, end_offset);
+	    if ( !found) continue;
+
+	    TObjectType **p_point = mpPoints + offset;//mCells.GetCellBeginIndex( y_position );
+	    for ( ; offset < end_offset; offset++ ) {
+	      double distance2 = Distance2( **p_point, ThePoint );
+	      if ( distance2 < current_result.GetDistance2() ) {
+		current_result.Set( *p_point );
+		current_result.SetDistance2( distance2 );
+	      }
+	      p_point++;
+	    }
+          } // for i_x
+          y_position += mCells.GetNumberOfCells( 0 );
+        } // for i_y
+      } // for i_z
+      radius *= 2.00;
+    }
+    return current_result;
+  }
+
+  ResultType NewSearchNearest( TObjectType const &ThePoint ) {
+    ResultType current_result;
+    if ( mNumberOfPoints == 0 )
+      return current_result;
+
+    current_result.SetDistance2( std::numeric_limits< double >::max() );
+    double cell_diagonal = sqrt( mCells.GetCellSize( 0 ) * mCells.GetCellSize( 0 ) + 
+				 mCells.GetCellSize( 1 ) * mCells.GetCellSize( 1 ) + 
+				 mCells.GetCellSize( 2 ) * mCells.GetCellSize( 2 ));
+    double limit_radius = 2.0 * cell_diagonal; // look into ThePoint cell and surrounding cells of the 1st shell
+
+    current_result = this->SearchNearestWithinRadius( ThePoint, limit_radius);
+    if ( current_result.IsObjectFound()) {
+      return current_result;
+    }
+
+    // nearest point not found let's do a search over occupied cells
+    const std::vector< std::size_t> &lstUsedCells = mCells.GetListUsedCellIndices();
+
+    // first round to get the closest cell centre to ThePoint
+    double distance2_centre_nearest_cell = std::numeric_limits< double >::max();
+    for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++) {
+      std::size_t idx = *it_idx;
+      InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx);
+      double distance2 = Distance2( Point( cell_centre[ 0], cell_centre[ 1], cell_centre[ 2]) , ThePoint );
+      if ( distance2 < distance2_centre_nearest_cell ) {
+    	distance2_centre_nearest_cell = distance2;
+      }
+    }
+    
+    if ( distance2_centre_nearest_cell == std::numeric_limits< double >::max()) // == no points in bin !!!
+      return current_result;
+
+    // now get the used cells within this point + radius
+    double search_radius = distance2_centre_nearest_cell + cell_diagonal * 1.5;
+    for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++) {
+      std::size_t idx = *it_idx;
+      InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx);
+      double distance2 = Distance2( Point( cell_centre[ 0], cell_centre[ 1], cell_centre[ 2]), ThePoint );
+      if ( distance2 < search_radius) {
+	// look into the points of the cell
+	this->SearchNearestInCell( idx, ThePoint, current_result);
+      }
     }
 
     return current_result;
@@ -156,10 +255,10 @@ private:
       return;
     for ( std::size_t offset = offset_begin; offset < offset_end; offset++ ) {
       TObjectType *p_point = mpPoints[ offset ];
-      auto distance_2 = Distance2( *p_point, ThePoint );
-      if ( distance_2 <= rCurrentResult.GetDistance2() ) {
+      auto distance2 = Distance2( *p_point, ThePoint );
+      if ( distance2 <= rCurrentResult.GetDistance2() ) {
         rCurrentResult.Set( p_point );
-        rCurrentResult.SetDistance2( distance_2 );
+        rCurrentResult.SetDistance2( distance2 );
       }
     }
   }
