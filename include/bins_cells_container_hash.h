@@ -24,7 +24,8 @@ protected:
   ParallelCoherentHash< t_CellContents, std::size_t> m_PCHCellsBeginIndices;
   std::size_t m_numCells; // = # cells of the full grid
   std::size_t m_numUsedCells;
-  
+  std::vector< std::size_t> m_lstUsedIndices;
+
 public:
   template < typename TIteratorType >
   BinsCellsContainerHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
@@ -63,7 +64,7 @@ public:
   //   return ret;
   // }
 
-  bool GetCellIndices( std::size_t Index, std::size_t &begin, std::size_t &end) {
+  bool GetCellStoredOffsets( std::size_t Index, std::size_t &begin, std::size_t &end) const {
     bool found = false;
     t_CellContents ret = m_PCHCellsBeginIndices.getData( Index, found);
     if ( !found) {
@@ -73,6 +74,8 @@ public:
     end = ret.offset_end;
     return true;
   }
+
+  const std::vector< std::size_t> &GetListUsedCellIndices() const { return m_lstUsedIndices;}
 
   bool CellIsEmpty( std::size_t Index ) const {
     bool found = false;
@@ -89,12 +92,8 @@ public:
       result *= mNumberOfCells[ i_dim - 1 ];
     }
     result += CalculatePosition( ThePoint[ 0 ], 0 );
-    // std::cout << "CalculateCellIndex: cell index for point "
-    // 	      << ThePoint[ 0] << " " << ThePoint[ 1] << " " << ThePoint[ 2]
-    // 	      << " is " << result << std::endl;
     return result;
   }
-
 
   std::size_t CalculatePosition( double Coordinate, int ThisDimension ) const {
     auto distance = Coordinate - mBoundingBox.GetMinPoint()[ ThisDimension ];
@@ -104,9 +103,6 @@ public:
     std::size_t result = ( position > mNumberOfCells[ ThisDimension ] - 1 )
                              ? mNumberOfCells[ ThisDimension ] - 1
                              : position;
-    // std::cout << "CalculatePosition: cell index for Coordinate "
-    // 	      << Coordinate << " in Dimension " << ThisDimension
-    // 	      << " is " << result << std::endl;
     return result;
   }
 
@@ -185,16 +181,16 @@ protected:
     }
 
     // sort used indices, to avoid loop over all cells: too costly for big grids
-    std::vector< std::size_t> lstUsedIndices;
+    m_lstUsedIndices.clear();
     for ( auto it_idx = setUsedIndices.begin(); it_idx != setUsedIndices.end(); it_idx++) {
-      lstUsedIndices.push_back( *it_idx);
+      m_lstUsedIndices.push_back( *it_idx);
     }
-    std::sort( lstUsedIndices.begin(), lstUsedIndices.end());
+    std::sort( m_lstUsedIndices.begin(), m_lstUsedIndices.end());
     
     bool first_time = true;
     std::size_t last_idx = 0;
     // for ( std::size_t idx = 0; idx < m_numCells; idx++) {
-    for ( auto it_idx = lstUsedIndices.begin(); it_idx < lstUsedIndices.end(); it_idx++) {
+    for ( auto it_idx = m_lstUsedIndices.begin(); it_idx < m_lstUsedIndices.end(); it_idx++) {
       std::size_t idx = *it_idx;
       bool found = false;
       m_PCHCellsBeginIndices.getData( idx, found); // look if cell is there
@@ -233,16 +229,6 @@ inline void BinsCellsContainerHash::PrintStatisticsHash() const {
 	}
       }
     }
-    // std::cout << "Used cells = ";
-    // for ( std::size_t idx = 0; idx < m_numCells; idx++) {
-    //   bool found = false;
-    //   m_PCHCellsBeginIndices.getData( idx, found);
-    //   if ( found) {
-    // 	std::cout << idx << " ";
-    //   }
-    // }
-    // std::cout << std::endl;
-    // the last this->GetTotalNumberOfCells() is already the total number of points...
     
     double occupancy_percent =
         ( 100.0 * ( ( double )numUsedCells / ( double )m_PCHCellsBeginIndices.getRawHashTableSize() ) );
@@ -281,11 +267,6 @@ inline void BinsCellsContainerHash::PrintStatistics() const {
     }
     std::cout << " = " << numberOfCells << " cells" << std::endl;
     std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
-
-    // for ( std::size_t idx = 0; idx < Dimension; idx++) {
-    //   std::cout << " Cell size in axis = " << idx << " is " << this->GetCellSize( idx) <<
-    //   std::endl;
-    // }
 
     std::cout << "Using ParallelCoherentHash" << std::endl;
     this->PrintStatisticsHash();

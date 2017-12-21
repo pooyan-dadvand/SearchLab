@@ -63,9 +63,6 @@ public:
       result *= mNumberOfCells[ i_dim - 1 ];
     }
     result += CalculatePosition( ThePoint[ 0 ], 0 );
-    // std::cout << "CalculateCellIndex: cell index for point "
-    // 	      << ThePoint[ 0] << " " << ThePoint[ 1] << " " << ThePoint[ 2]
-    // 	      << " is " << result << std::endl;
     return result;
   }
 
@@ -78,9 +75,6 @@ public:
     std::size_t result= ( position > mNumberOfCells[ ThisDimension ] - 1 )
                             ? mNumberOfCells[ ThisDimension ] - 1
                             : position;
-    // std::cout << "CalculatePosition: cell index for Coordinate "
-    // 	      << Coordinate << " in Dimension " << ThisDimension
-    // 	      << " is " << result << std::endl;
     return result;
   }
 
@@ -203,11 +197,6 @@ inline void BinsCellsContainer::PrintStatistics() const {
     }
     std::cout << " = " << numberOfCells << " cells" << std::endl;
     std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
-
-    // for ( std::size_t idx = 0; idx < Dimension; idx++) {
-    //   std::cout << " Cell size in axis = " << idx << " is " << this->GetCellSize( idx) <<
-    //   std::endl;
-    // }
 
     std::cout << "Using std::vector" << std::endl;
     this->PrintStatisticsStdVector();
