@@ -10,8 +10,6 @@
 #include "points_bins.h"
 #include "points_bins_hash.h"
 
-#include "clock.h"
-
 namespace PointsNew {
 
   template < class BinsType >
@@ -64,8 +62,6 @@ namespace PointsNew {
     }
     t1 = GetCurrentTime();
     std::cout << t1 - t0 << "\t";
-
-    Clock first_clock( "/tmp/SearchLab", "bins.SearchNearest");
 
     // Search Nearest Parallel OpenMP
     t0 = GetCurrentTime();

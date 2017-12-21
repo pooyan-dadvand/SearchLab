@@ -65,8 +65,7 @@ public:
 
   bool GetCellIndices( std::size_t Index, std::size_t &begin, std::size_t &end) {
     bool found = false;
-    // t_CellContents ret = m_PCHCellsBeginIndices.getData( Index, found);
-    t_CellContents ret = m_PCHCellsBeginIndices.findDataRef( Index, found);
+    t_CellContents ret = m_PCHCellsBeginIndices.getData( Index, found);
     if ( !found) {
       return false;
     }
