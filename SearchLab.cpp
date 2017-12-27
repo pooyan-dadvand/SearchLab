@@ -196,7 +196,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   //std::vector< Point > points_vector;
     std::vector< Point> points_1_100_vector;
     std::vector< Point> points_1_10_vector;
-    {
+    if ( G_PrintBinsStatistics ) {
       Crono clk;
       for ( std::size_t i = 0; i < npoints; i++ ) {
         // points_vector.push_back( *( points[ i ] ) );
@@ -210,7 +210,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     }
 
   // Statistical tests:
-  {
+  if ( G_PrintBinsStatistics ) {
     Crono clk;
     std::cout << "===== Statistics 1/100 points: =====" << std::endl;
     size_t grid100[ 3 ] = { 55, 55, 55 };
@@ -219,7 +219,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     mCells_1_100.PrintStatistics();
     std::cout << "     time = " << t << "s." << std::endl;
   }
-  {
+  if ( G_PrintBinsStatistics ) {
     Crono clk;
     std::cout << "===== Statistics 1/10 points: =====" << std::endl;
     size_t grid10[ 3 ] = { 119, 119, 119 };

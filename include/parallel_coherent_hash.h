@@ -47,8 +47,8 @@ private:
     void setKey( const t_KeyType &key_in) { m_Key = key_in;}
     void setAge( const char &age_in) { m_Age = age_in;}
   private:
-    t_KeyType m_Key;
     char m_Age;
+    t_KeyType m_Key;
   };
   
   class HashEntry {
