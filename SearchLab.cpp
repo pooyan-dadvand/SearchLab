@@ -26,6 +26,8 @@
 
 #include "parallel_coherent_hash.h"
 
+#include "clock.h"
+
 bool G_UsePointsBinsHash = false;
 bool G_PrintBinsStatistics = false;
 #ifdef NDEBUG
@@ -40,22 +42,28 @@ std::size_t G_GridSize[ 3] = { 0, 0, 0};
 
 inline bool FileExists( const std::string &file_name) {
   // from https://stackoverflow.com/questions/12774207/fastest-way-to-check-if-a-file-exist-using-standard-c-c11-c
+#ifndef _WIN32
   struct stat buffer;   
-  return ( stat ( file_name.c_str(), &buffer) == 0); 
+  int ret = stat( file_name.c_str(), &buffer ); // stat() fails on windows with files >
+#else // _WIN32
+  struct _stat64 buffer64;
+  int ret = _stat64( file_name.c_str(), &buffer64 );
+#endif // _WIN32
+  return ( ret == 0); 
 }
 
 int RunPointSearchComparison( std::string Filename, double Radius ) {
   // Input data
   std::cout << std::setprecision( 4 ) << std::fixed;
 
-  Point **points;
-  Point point;
-  SphereObject< 3 > object;
-
   double t0 = GetCurrentTime();
-  // std::ifstream input;
-  // input.open( Filename.c_str() );
+#ifdef _WIN32
+  std::ifstream input;
+  input.open( Filename.c_str() );
+  std::cout << "Gzip compressed streams are not supported in MS Windows\n"; // zstr has errors for bigger files ( may be > 4GB)
+#else
   zstr::ifstream input( Filename.c_str() );
+#endif
 
   if ( !input ) {
     std::cout << "Cannot open data file" << std::endl;
@@ -72,9 +80,20 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     std::cout << "ERROR: no points information read, nothing to do!!!" << std::endl;
     return 1;
   }
-  
-  points = new Point *[ npoints ];
+
+  // Point **points;
+  Point point;
+  // Object Interfaces ( not implemented at the moment )
+  // SphereObject< 3 > object;
+  // points = new Point *[ npoints ];
+  std::vector< Point > points_vector;
+  // Object Interfaces
+  // - New Interface
+  // TO BE FILLED
+  // - Old Interface
+#ifdef USE_KRATOS
   std::vector< Entities::PtrObjectType > objects( npoints );
+#endif
 
   std::size_t pid;
   
@@ -86,23 +105,29 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     //   std::cout << "Point " << i + 1 << " = " << pid << " - " << point << std::endl;
     // }
 
-    for ( std::size_t d = 0; d < 3; d++ ) {
-      object[ d ] = point[ d ];
-    }
-    object.radius = 0.5 / ( double)npoints;
+    // Object Interfaces ( not implemented at the moment )
+    // for ( std::size_t d = 0; d < 3; d++ ) {
+    //   object[ d ] = point[ d ];
+    // }
+    // object.radius = 0.5 / ( double)npoints;
 
-    points[ i ] = new Point( point );
-    points[ i ]->id = pid;
+    // points[ i ] = new Point( point );
+    // points[ i ]->id = pid;
+    point.id = pid;
+    points_vector.push_back( point);
 
+#ifdef USE_KRATOS
+    // Object Interfaces ( not implemented at the moment )
     objects[ i ] = new SphereObject< 3 >( object );
     objects[ i ]->id = pid;
     objects[ i ]->radius = 0.5 / ( double)npoints;
+#endif
   }
   double t1 = GetCurrentTime();
   std::cout << "Reading file = " << t1 - t0 << " sec." << std::endl;
 
-  Point min_point( *points[ 0 ] );
-  Point max_point( *points[ 0 ] );
+  Point min_point( points_vector[ 0 ] );
+  Point max_point( points_vector[ 0 ] );
   Point mid_point;
   SphereObject< 3 > mid_object;
 
@@ -112,10 +137,10 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
 
   for ( std::size_t i = 0; i < npoints; i++ ) {
     for ( std::size_t j = 0; j < 3; j++ ) {
-      if ( min_point[ j ] > ( *points[ i ] )[ j ] )
-        min_point[ j ] = ( *points[ i ] )[ j ];
-      if ( max_point[ j ] < ( *points[ i ] )[ j ] )
-        max_point[ j ] = ( *points[ i ] )[ j ];
+      if ( min_point[ j ] > ( points_vector[ i ] )[ j ] )
+        min_point[ j ] = ( points_vector[ i ] )[ j ];
+      if ( max_point[ j ] < ( points_vector[ i ] )[ j ] )
+        max_point[ j ] = ( points_vector[ i ] )[ j ];
     }
   }
 
@@ -168,10 +193,51 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
 #endif // USE_KRATOS
 
   // Point-Based Search Structures
-  std::vector< Point > points_vector;
-  for ( std::size_t i = 0; i < npoints; i++ ) {
-    points_vector.push_back( *( points[ i ] ) );
+  //std::vector< Point > points_vector;
+    std::vector< Point> points_1_100_vector;
+    std::vector< Point> points_1_10_vector;
+    {
+      Crono clk;
+      for ( std::size_t i = 0; i < npoints; i++ ) {
+        // points_vector.push_back( *( points[ i ] ) );
+        if ( ( i % 100 ) == 0 )
+          points_1_100_vector.push_back( points_vector[ i ] );
+        if ( ( i % 10 ) == 0 )
+          points_1_10_vector.push_back( points_vector[ i ] );
+      }
+      float t = clk.fin();
+      std::cout << "     time = " << t << "s." << std::endl;
+    }
+
+  // Statistical tests:
+  {
+    Crono clk;
+    std::cout << "===== Statistics 1/100 points: =====" << std::endl;
+    size_t grid100[ 3 ] = { 55, 55, 55 };
+    BinsCellsContainer mCells_1_100( points_1_100_vector.begin(), points_1_100_vector.end(), grid100 );
+    float t = clk.fin();
+    mCells_1_100.PrintStatistics();
+    std::cout << "     time = " << t << "s." << std::endl;
   }
+  {
+    Crono clk;
+    std::cout << "===== Statistics 1/10 points: =====" << std::endl;
+    size_t grid10[ 3 ] = { 119, 119, 119 };
+    BinsCellsContainer mCells_1_10( points_1_10_vector.begin(), points_1_10_vector.end(), grid10 );
+    float t = clk.fin();
+    mCells_1_10.PrintStatistics();
+    std::cout << "     time = " << t << "s." << std::endl;
+  }
+  /*
+  {
+    Crono clk;
+    std::cout << "===== Statistics 1/1 points: =====" << std::endl;
+    BinsCellsContainer mCells_1_1( points_vector.begin(), points_vector.end(), G_GridSize );
+    float t = clk.fin();
+    mCells_1_1.PrintStatistics();
+    std::cout << "     time = " << t << "s." << std::endl;
+  }
+  */
 
   // Point Interfaces
   // - New Interface
