@@ -20,7 +20,7 @@ public:
 
   template < typename TIteratorType >
   BinsCellsContainer( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
-		      const std::size_t GridSize[ 3] ) // at the moment unused
+		      const std::size_t GridSize[ 3], bool initialize_cells = true )
     : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ) {
     
     std::size_t approximated_number_of_cells = std::distance( PointsBegin, PointsEnd );
@@ -30,7 +30,8 @@ public:
 
     CalculateCellSize( approximated_number_of_cells, GridSize );
 
-    InitializeCellsBeginIndices( PointsBegin, PointsEnd );
+    if ( initialize_cells )
+      InitializeCellsBeginIndices( PointsBegin, PointsEnd );
   }
 
   void SetNumberOfCells( std::array< std::size_t, Dimension > const &TheNumberOfCells ) {
@@ -78,6 +79,7 @@ public:
     return result;
   }
 
+  void PrintGridSize() const;
   void PrintStatistics() const;
   void PrintStatisticsStdVector() const;
   
@@ -166,41 +168,52 @@ inline void BinsCellsContainer::PrintStatisticsStdVector() const {
     std::cout << " Bins size cell array = " << bins_cells_array_size_MB
               << " MB, used = " << bins_cells_array_size_MB * occupancy_percent / 100.0 << " MB"
               << std::endl;
-    std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
-              << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
-              << std::endl;
-
-    std::cout << "Number of cells with only one point = " << numCellsWithSinglePoint << std::endl;
-    IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
-    for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
-      lastOffset = this->GetCellBeginIndex( idx );
-      std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
-      if ( numberOfPoints2 != 0 ) {
-        ic.countSample( ( double )numberOfPoints2 );
-      }
+    if ( 0 ) {
+      std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
+        << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
+        << std::endl;
     }
-    ic.print();
+
+    if ( 0 ) {
+      std::cout << "Number of cells with only one point = " << numCellsWithSinglePoint << std::endl;
+      IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
+      for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
+        lastOffset = this->GetCellBeginIndex( idx );
+        std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
+        if ( numberOfPoints2 != 0 ) {
+          ic.countSample( ( double )numberOfPoints2 );
+        }
+      }
+      ic.print();
+    }
+}
+
+inline void BinsCellsContainer::PrintGridSize() const {
+  std::locale prev_loc = std::cout.getloc();
+  std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
+  std::cout << "Bin of ";
+  std::size_t numberOfCells = 1;
+  for ( std::size_t i = 0; i < Dimension; i++ ) {
+    numberOfCells *= this->GetNumberOfCells( i );
+    std::cout << this->GetNumberOfCells( i );
+    if ( i < Dimension - 1 )
+      std::cout << " x ";
+  }
+  std::cout << " = " << numberOfCells << " cells" << std::endl;
+  std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
 }
 
 inline void BinsCellsContainer::PrintStatistics() const {
-    // Bins statistics
-    std::cout << "=== Bins statistics === \n";
-    std::locale prev_loc = std::cout.getloc();
-    std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
-    std::cout << "Bin of ";
-    std::size_t numberOfCells = 1;
-    for ( std::size_t i = 0; i < Dimension; i++ ) {
-      numberOfCells *= this->GetNumberOfCells( i );
-      std::cout << this->GetNumberOfCells( i );
-      if ( i < Dimension - 1 )
-        std::cout << " x ";
-    }
-    std::cout << " = " << numberOfCells << " cells" << std::endl;
-    std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
+  // Bins statistics
+  std::cout << "=== Bins statistics === \n";
+  this->PrintGridSize();
+  std::locale prev_loc = std::cout.getloc();
+  std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
+  // std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
 
-    std::cout << "Using std::vector" << std::endl;
-    this->PrintStatisticsStdVector();
-    
-    std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
-    std::cout << "=== End of statistics === \n";
+  // std::cout << "Using std::vector" << std::endl;
+  this->PrintStatisticsStdVector();
+
+  std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
+  std::cout << "=== End of statistics === \n";
 }

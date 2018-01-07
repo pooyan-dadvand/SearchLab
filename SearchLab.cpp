@@ -7,6 +7,8 @@
 #include <sys/stat.h>
 #include <win_missing.h>
 
+#include <random>
+
 #ifdef USE_KRATOS
 // Ugly fixes
 #include <assert.h>
@@ -27,6 +29,7 @@
 #include "parallel_coherent_hash.h"
 
 #include "clock.h"
+#include "bins_statistics.h"
 
 bool G_UsePointsBinsHash = false;
 bool G_PrintBinsStatistics = false;
@@ -192,52 +195,25 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   Entities::PointIterator p_results = new Entities::PtrPointType[ max_results ];
 #endif // USE_KRATOS
 
-  // Point-Based Search Structures
-  //std::vector< Point > points_vector;
-    std::vector< Point> points_1_100_vector;
-    std::vector< Point> points_1_10_vector;
-    if ( G_PrintBinsStatistics ) {
-      Crono clk;
-      for ( std::size_t i = 0; i < npoints; i++ ) {
-        // points_vector.push_back( *( points[ i ] ) );
-        if ( ( i % 100 ) == 0 )
-          points_1_100_vector.push_back( points_vector[ i ] );
-        if ( ( i % 10 ) == 0 )
-          points_1_10_vector.push_back( points_vector[ i ] );
-      }
-      float t = clk.fin();
-      std::cout << "     time = " << t << "s." << std::endl;
-    }
+  if ( G_PrintBinsStatistics ) {
 
-  // Statistical tests:
-  if ( G_PrintBinsStatistics ) {
-    Crono clk;
-    std::cout << "===== Statistics 1/100 points: =====" << std::endl;
-    size_t grid100[ 3 ] = { 55, 55, 55 };
-    BinsCellsContainer mCells_1_100( points_1_100_vector.begin(), points_1_100_vector.end(), grid100 );
-    float t = clk.fin();
-    mCells_1_100.PrintStatistics();
-    std::cout << "     time = " << t << "s." << std::endl;
+    size_t gridFull[ 3 ] = { 0, 0, 0 };
+    GetSuggestedGridSize( gridFull, points_vector);
+
+    int discretization = 100;
+    bool select_random_points = false;
+    gridFull[ 0 ] = 0;
+    gridFull[ 1 ] = 0;
+    gridFull[ 2 ] = 0;
+    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    select_random_points = true;
+    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    discretization = 10;
+    select_random_points = false;
+    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    select_random_points = true;
+    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
   }
-  if ( G_PrintBinsStatistics ) {
-    Crono clk;
-    std::cout << "===== Statistics 1/10 points: =====" << std::endl;
-    size_t grid10[ 3 ] = { 119, 119, 119 };
-    BinsCellsContainer mCells_1_10( points_1_10_vector.begin(), points_1_10_vector.end(), grid10 );
-    float t = clk.fin();
-    mCells_1_10.PrintStatistics();
-    std::cout << "     time = " << t << "s." << std::endl;
-  }
-  /*
-  {
-    Crono clk;
-    std::cout << "===== Statistics 1/1 points: =====" << std::endl;
-    BinsCellsContainer mCells_1_1( points_vector.begin(), points_vector.end(), G_GridSize );
-    float t = clk.fin();
-    mCells_1_1.PrintStatistics();
-    std::cout << "     time = " << t << "s." << std::endl;
-  }
-  */
 
   // Point Interfaces
   // - New Interface
