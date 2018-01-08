@@ -109,6 +109,14 @@ public:
     return centre;
   }
 
+  void GetCellVectorIndices( std::size_t Index, std::size_t &idx_x, std::size_t &idx_y, std::size_t &idx_z ) {
+    const std::size_t num_xy = mNumberOfCells[ 0 ] * mNumberOfCells[ 1 ];
+    idx_z = Index / num_xy;
+    const std::size_t rem = Index % num_xy;
+    idx_y = rem / mNumberOfCells[ 0 ];
+    idx_x = rem % mNumberOfCells[ 0 ];
+  }
+
   std::size_t CalculatePosition( double Coordinate, int ThisDimension ) const {
     auto distance = Coordinate - mBoundingBox.GetMinPoint()[ ThisDimension ];
     distance = ( distance < 0.00 ) ? 0.00 : distance;
