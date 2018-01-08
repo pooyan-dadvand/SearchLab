@@ -99,7 +99,9 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
 #endif
 
   std::size_t pid;
-  
+
+  std::locale prev_loc = std::cout.getloc();
+  std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
   for ( std::size_t i = 0; i < npoints; i++ ) {
     input >> pid;
     input >> point;
@@ -119,6 +121,10 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     point.id = pid;
     points_vector.push_back( point);
 
+    if ( ( ( i + 1) % 1000000 ) == 0 ) {
+      std::cout << "     points read: " << i + 1 << " of " << npoints << std::endl;
+    }
+
 #ifdef USE_KRATOS
     // Object Interfaces ( not implemented at the moment )
     objects[ i ] = new SphereObject< 3 >( object );
@@ -126,6 +132,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     objects[ i ]->radius = 0.5 / ( double)npoints;
 #endif
   }
+  std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
   double t1 = GetCurrentTime();
   std::cout << "Reading file = " << t1 - t0 << " sec." << std::endl;
 
@@ -161,7 +168,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   std::size_t numrepetitions = G_NumberOfRepetitions;
   std::size_t numrepetitions_nearest = numrepetitions * 10;
 
-  std::locale prev_loc = std::cout.getloc();
+  prev_loc = std::cout.getloc();
   std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
   if ( G_PrintBinsStatistics) {
     std::cout << " min point : " << min_point << std::endl;
