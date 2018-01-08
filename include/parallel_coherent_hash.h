@@ -39,8 +39,8 @@ private:
   class KeyAgeTuple {
   public:
     KeyAgeTuple() {}
-    KeyAgeTuple( const KeyAgeTuple &kat): m_Key( kat.m_Key), m_Age( kat.m_Age) {}
-    KeyAgeTuple( const t_KeyType &key_in, const char age_in = 0): m_Key( key_in), m_Age( age_in) {}
+    KeyAgeTuple( const KeyAgeTuple &kat): m_Age( kat.m_Age), m_Key( kat.m_Key) {}
+    KeyAgeTuple( const t_KeyType &key_in, const char age_in = 0): m_Age( age_in), m_Key( key_in) {}
     KeyAgeTuple &operator=( const KeyAgeTuple &kat) { m_Key = kat.m_Key; m_Age = kat.m_Age; return *this;}
       t_KeyType getKey() const { return m_Key;}
     char getAge() const { return m_Age;}
