@@ -12,6 +12,11 @@
 #include "bins_cells_container_hash.h"
 #include "spatial_search_result.h"
 
+template<typename T>
+T abs_diff( T a, T b ) {
+  return a > b ? a - b : b - a;
+}
+
 template < typename TObjectType > class PointsBinsHash {
   static constexpr int Dimension = 3;
 
@@ -171,6 +176,7 @@ public:
     }
     return current_result;
   }
+ 
 
   ResultType NewSearchNearest( TObjectType const &ThePoint ) {
     ResultType current_result;
@@ -192,28 +198,72 @@ public:
     const std::vector< std::size_t> &lstUsedCells = mCells.GetListUsedCellIndices();
 
     // first round to get the closest cell centre to ThePoint
+    bool use_centre = true;
     double distance2_centre_nearest_cell = std::numeric_limits< double >::max();
-    for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++) {
-      std::size_t idx = *it_idx;
-      InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx);
-      double distance2 = Distance2( Point( cell_centre[ 0], cell_centre[ 1], cell_centre[ 2]) , ThePoint );
-      if ( distance2 < distance2_centre_nearest_cell ) {
-    	distance2_centre_nearest_cell = distance2;
+    long long distance2_idx_nearest_cell = std::numeric_limits< long long >::max();
+    if ( use_centre ) {
+      for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
+        std::size_t idx = *it_idx;
+        InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx );
+        double distance2 = Distance2( Point( cell_centre[ 0 ], cell_centre[ 1 ], cell_centre[ 2 ] ), ThePoint );
+        if ( distance2 < distance2_centre_nearest_cell ) {
+          distance2_centre_nearest_cell = distance2;
+        }
       }
+    } else {
+      std::size_t idx_search_cell = mCells.CalculateCellIndex( ThePoint );
+      std::size_t idx_search_x, idx_search_y, idx_search_z;
+      std::size_t idx_cell_min = 0;
+      mCells.GetCellVectorIndices( idx_search_cell, idx_search_x, idx_search_y, idx_search_z );
+      for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
+        std::size_t idx = *it_idx;
+        std::size_t idx_x, idx_y, idx_z;
+        mCells.GetCellVectorIndices( idx, idx_x, idx_y, idx_z );
+        long long diff_x = abs( ( long long )idx_x - ( long long )idx_search_x ); // abs_diff( idx_x, idx_search_x );
+        long long diff_y = abs( ( long long )idx_y - ( long long )idx_search_y ); //abs_diff( idx_y, idx_search_y );
+        long long diff_z = abs( ( long long )idx_z - ( long long )idx_search_z ); //abs_diff( idx_z, idx_search_z );
+        long long dist2 = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
+        if ( dist2 < distance2_idx_nearest_cell ) {
+          distance2_idx_nearest_cell = dist2;
+          idx_cell_min = idx;
+        }
+      }
+      InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx_cell_min );
+      distance2_centre_nearest_cell = Distance2( Point( cell_centre[ 0 ], cell_centre[ 1 ], cell_centre[ 2 ] ), ThePoint );
     }
     
     if ( distance2_centre_nearest_cell == std::numeric_limits< double >::max()) // == no points in bin !!!
       return current_result;
 
     // now get the used cells within this point + radius
-    double search_radius = distance2_centre_nearest_cell + cell_diagonal * 1.5;
-    for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++) {
-      std::size_t idx = *it_idx;
-      InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx);
-      double distance2 = Distance2( Point( cell_centre[ 0], cell_centre[ 1], cell_centre[ 2]), ThePoint );
-      if ( distance2 < search_radius) {
-	// look into the points of the cell
-	this->SearchNearestInCell( idx, ThePoint, current_result);
+    if ( use_centre ) {
+      double search_radius = distance2_centre_nearest_cell + cell_diagonal * 1.5;
+      for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
+        std::size_t idx = *it_idx;
+        InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx );
+        double distance2 = Distance2( Point( cell_centre[ 0 ], cell_centre[ 1 ], cell_centre[ 2 ] ), ThePoint );
+        if ( distance2 < search_radius ) {
+          // look into the points of the cell
+          this->SearchNearestInCell( idx, ThePoint, current_result );
+        }
+      }
+    } else {
+      long long search_radius = distance2_idx_nearest_cell + 3; // i.e. diagonal of idx = sqrt( 1*1 + 1*1 + 1*1), so idx*idx = 3
+      std::size_t idx_search_cell = mCells.CalculateCellIndex( ThePoint );
+      std::size_t idx_search_x, idx_search_y, idx_search_z;
+      mCells.GetCellVectorIndices( idx_search_cell, idx_search_x, idx_search_y, idx_search_z );
+      for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
+        std::size_t idx = *it_idx;
+        std::size_t idx_x, idx_y, idx_z;
+        mCells.GetCellVectorIndices( idx, idx_x, idx_y, idx_z );
+        long long diff_x = abs( ( long long )idx_x - ( long long )idx_search_x ); // abs_diff( idx_x, idx_search_x );
+        long long diff_y = abs( ( long long )idx_y - ( long long )idx_search_y ); //abs_diff( idx_y, idx_search_y );
+        long long diff_z = abs( ( long long )idx_z - ( long long )idx_search_z ); //abs_diff( idx_z, idx_search_z );
+        long long dist2 = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
+        if ( dist2 < search_radius ) {
+          // look into the points of the cell
+          this->SearchNearestInCell( idx, ThePoint, current_result );
+        }
       }
     }
 

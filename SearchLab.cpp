@@ -202,8 +202,8 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   Entities::PointIterator p_results = new Entities::PtrPointType[ max_results ];
 #endif // USE_KRATOS
 
-  if ( G_PrintBinsStatistics ) {
-
+  bool do_guess_occupancy = false;
+  if ( G_PrintBinsStatistics && do_guess_occupancy ) {
     size_t gridFull[ 3 ] = { 0, 0, 0 };
     GetSuggestedGridSize( gridFull, points_vector);
 
