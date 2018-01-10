@@ -145,6 +145,8 @@ inline void BinsCellsContainer::PrintStatisticsStdVector() const {
     std::size_t minNumPoints = this->GetTotalNumberOfCells();
     std::size_t maxNumPoints = 0;
     std::size_t numCellsWithSinglePoint = 0;
+    std::size_t numCellsWithLessThan10 = 0;
+    std::size_t numCellsWithLessThan100 = 0;
     for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
       lastOffset = this->GetCellBeginIndex( idx );
       std::size_t numberOfPoints = lastOffset - this->GetCellBeginIndex( idx - 1 );
@@ -155,6 +157,10 @@ inline void BinsCellsContainer::PrintStatisticsStdVector() const {
         maxNumPoints = ( numberOfPoints > maxNumPoints ) ? numberOfPoints : maxNumPoints;
         if ( numberOfPoints == 1 )
           numCellsWithSinglePoint++;
+        if ( numberOfPoints <= 10 )
+          numCellsWithLessThan10++;
+        if ( numberOfPoints <= 100 )
+          numCellsWithLessThan100++;
       }
     }
     // the last this->GetTotalNumberOfCells() is already the total number of points...
@@ -168,14 +174,16 @@ inline void BinsCellsContainer::PrintStatisticsStdVector() const {
     std::cout << " Bins size cell array = " << bins_cells_array_size_MB
               << " MB, used = " << bins_cells_array_size_MB * occupancy_percent / 100.0 << " MB"
               << std::endl;
-    if ( 0 ) {
-      std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
-        << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
-        << std::endl;
-    }
-
-    if ( 0 ) {
-      std::cout << "Number of cells with only one point = " << numCellsWithSinglePoint << std::endl;
+    std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
+              << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
+              << std::endl;
+    
+    bool detailed_statistics = true;
+    if ( detailed_statistics ) {
+      std::cout << "Number of cells with only ( 1, <= 10, <= 100) points = ( "
+                << numCellsWithSinglePoint << ", " 
+                << numCellsWithLessThan10 << ", " 
+                << numCellsWithLessThan100 << ") " << std::endl;
       IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
       for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
         lastOffset = this->GetCellBeginIndex( idx );

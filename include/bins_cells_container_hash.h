@@ -242,6 +242,8 @@ inline void BinsCellsContainerHash::PrintStatisticsHash() const {
     std::size_t minNumPoints = this->GetTotalNumberOfCells(); // a big number like any other...
     std::size_t maxNumPoints = 0;
     std::size_t numCellsWithSinglePoint = 0;
+    std::size_t numCellsWithLessThan10 = 0;
+    std::size_t numCellsWithLessThan100 = 0;
     for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
       if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
 	std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
@@ -253,6 +255,10 @@ inline void BinsCellsContainerHash::PrintStatisticsHash() const {
 	  maxNumPoints = ( numberOfPoints > maxNumPoints ) ? numberOfPoints : maxNumPoints;
 	  if ( numberOfPoints == 1 )
 	    numCellsWithSinglePoint++;
+          if ( numberOfPoints <= 10 )
+            numCellsWithLessThan10++;
+          if ( numberOfPoints <= 100 )
+            numCellsWithLessThan100++;
 	}
       }
     }
@@ -265,18 +271,25 @@ inline void BinsCellsContainerHash::PrintStatisticsHash() const {
               << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
               << std::endl;
 
-    std::cout << "Number of cells with only one point = " << numCellsWithSinglePoint << std::endl;
-    IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
-    for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
-      if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
-	std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
-	std::size_t numberOfPoints = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_end - lastOffset;
-	if ( numberOfPoints != 0 ) {
-	  ic.countSample( ( double )numberOfPoints );
-	}
+    bool detailed_statistics = false; // true;
+    if ( detailed_statistics) {
+      std::cout << "Number of cells with only ( 1, <= 10, <= 100) points = ( "
+                << numCellsWithSinglePoint << ", " 
+                << numCellsWithLessThan10 << ", " 
+                << numCellsWithLessThan100 << ") " << std::endl;
+      
+      IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
+      for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
+        if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
+          std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
+          std::size_t numberOfPoints = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_end - lastOffset;
+          if ( numberOfPoints != 0 ) {
+            ic.countSample( ( double )numberOfPoints );
+          }
+        }
       }
+      ic.print();
     }
-    ic.print();
 }
 
 inline void BinsCellsContainerHash::PrintStatistics() const {
