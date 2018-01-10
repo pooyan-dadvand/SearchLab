@@ -119,6 +119,10 @@ public:
     mCells.PrintStatistics();
   }
 
+  void PrintDensitiesInFile( const char *filename) const {
+    mCells.PrintDensitiesInFile( filename);
+  }
+
 private:
   std::size_t mNumberOfPoints;
   BinsCellsContainer mCells;

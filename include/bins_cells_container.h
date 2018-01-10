@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include "bounding_box.h"
 #include "interval_count.h"
+#include <fcntl.h>
 
 class BinsCellsContainer {
   static constexpr int Dimension = 3;
@@ -82,6 +83,7 @@ public:
   void PrintGridSize() const;
   void PrintStatistics() const;
   void PrintStatisticsStdVector() const;
+  void PrintDensitiesInFile( const char *filename) const;
   
 private:
   void CalculateCellSize( std::size_t ApproximatedSize, const std::size_t GridSize[ 3] ) {
@@ -140,7 +142,6 @@ protected:
 
 inline void BinsCellsContainer::PrintStatisticsStdVector() const {
     std::size_t numUsedCells = 0;
-    std::size_t lastOffset = 0;
     std::size_t totNumPoints = 0;
     std::size_t minNumPoints = this->GetTotalNumberOfCells();
     std::size_t maxNumPoints = 0;
@@ -148,7 +149,7 @@ inline void BinsCellsContainer::PrintStatisticsStdVector() const {
     std::size_t numCellsWithLessThan10 = 0;
     std::size_t numCellsWithLessThan100 = 0;
     for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
-      lastOffset = this->GetCellBeginIndex( idx );
+      std::size_t lastOffset = this->GetCellBeginIndex( idx );
       std::size_t numberOfPoints = lastOffset - this->GetCellBeginIndex( idx - 1 );
       if ( numberOfPoints != 0 ) {
         numUsedCells++;
@@ -186,28 +187,13 @@ inline void BinsCellsContainer::PrintStatisticsStdVector() const {
       //           << numCellsWithLessThan100 << ") " << std::endl;
       // IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
       // for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
-      //   lastOffset = this->GetCellBeginIndex( idx );
+      //   std::size_t lastOffset = this->GetCellBeginIndex( idx );
       //   std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
       //   if ( numberOfPoints2 != 0 ) {
       //     ic.countSample( ( double )numberOfPoints2 );
       //   }
       // }
       // ic.print();
-      double lstPivots[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                             10, 20, 30, 40, 50, 60, 70, 80, 90, 
-                             100, 200, 300, 400, 500, 600, 700, 800, 900, 
-                             1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 
-                             10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 
-                             2000000000};
-      IntervalCount ic( ( int)( sizeof( lstPivots) / sizeof( double)) - 1, lstPivots); // num Intervals = num Pivots - 1
-      for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
-        lastOffset = this->GetCellBeginIndex( idx );
-        std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
-        if ( numberOfPoints2 != 0 ) {
-          ic.countSample( ( double )numberOfPoints2 );
-        }
-      }
-      ic.printAsFile();
     }
 }
 
@@ -239,4 +225,34 @@ inline void BinsCellsContainer::PrintStatistics() const {
 
   std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
   std::cout << "=== End of statistics === \n";
+}
+
+void BinsCellsContainer::PrintDensitiesInFile( const char *filename) const {
+  double lstPivots[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+			 10, 20, 30, 40, 50, 60, 70, 80, 90, 
+			 100, 200, 300, 400, 500, 600, 700, 800, 900, 
+			 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 
+			 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 
+			 1000000};
+
+  if ( filename && *filename) {
+    FILE *fo = fopen( filename, "a");
+    if ( fo) {  
+      fprintf( fo, "# Bin of %d x %d x %d = %lld cells.\n", 
+	       ( int)( this->GetNumberOfCells( 0 )), ( int)( this->GetNumberOfCells( 1 )), ( int)( this->GetNumberOfCells( 2 )), 
+	       ( long long)( this->GetNumberOfCells( 0 ) * this->GetNumberOfCells( 1 ) * this->GetNumberOfCells( 2 )));
+      IntervalCount ic( ( int)( sizeof( lstPivots) / sizeof( double)) - 1, lstPivots); // num Intervals = num Pivots - 1
+      for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
+	std::size_t lastOffset = this->GetCellBeginIndex( idx );
+	std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
+	if ( numberOfPoints2 != 0 ) {
+	  ic.countSample( ( double )numberOfPoints2 );
+	}
+      }
+      ic.printAsFile( fo);
+      fclose( fo);
+    }
+  } else {
+    std::cout << "Nothing to do in PrintDensitiesInFile, as filename is nullptr." << std::endl;
+  }
 }

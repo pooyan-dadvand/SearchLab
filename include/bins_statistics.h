@@ -19,7 +19,7 @@ inline void GetSuggestedGridSize( size_t gridFull[ 3], const std::vector< Point>
 
 inline void DoBinsStatistics( const std::vector< Point> &points_vector,
                               int discretization, bool select_random_points,
-                              const size_t grid_sample[ 3]) {
+                              const size_t grid_sample[ 3], const char *filename) {
   std::vector< Point> points_sample;
   size_t npoints = points_vector.size();
   std::cout << "===== Occupancy statistics 1/" << discretization 
@@ -43,7 +43,7 @@ inline void DoBinsStatistics( const std::vector< Point> &points_vector,
 	  points_sample.push_back( points_vector[ i ] );
       }
     }
-    float t = clk.fin();
+    // float t = clk.fin();
     // std::cout << "     sampling time = " << t << "s." << std::endl;
   }
 
@@ -51,9 +51,10 @@ inline void DoBinsStatistics( const std::vector< Point> &points_vector,
     Crono clk;
     // size_t grid_sample[ 3 ] = { 0, 0, 0 }; // = { 55, 55, 55 };
     BinsCellsContainer cells_sample( points_sample.begin(), points_sample.end(), grid_sample );
-    float t = clk.fin();
+    // float t = clk.fin();
     cells_sample.PrintStatistics();
     // std::cout << "     bins time = " << t << "s." << std::endl;
+    cells_sample.PrintDensitiesInFile( filename);
   }
 
   float t = clk_total.fin();

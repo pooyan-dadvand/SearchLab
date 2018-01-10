@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <iostream>
+#include <fcntl.h>
 
 class IntervalCount {
 public:
@@ -17,7 +18,7 @@ public:
   void defineIntervals( int numIntervals, const double *lstPivots);
   void countSample( double value);
   void print() const;
-  void printAsFile() const;
+  void printAsFile( FILE *fo) const;
 private:
   int m_numIntervals;
   double *m_pivots;
@@ -91,11 +92,12 @@ void IntervalCount::print() const {
   }
 }
 
-void IntervalCount::printAsFile() const {
+void IntervalCount::printAsFile( FILE *fo) const {
   if ( m_numIntervals) {
-    printf( "points/cell \tcount\n");
+    fprintf( fo, "# points/cell   count\n");
     for ( int i = 0; i < m_numIntervals; i++) {
-      printf( "%d \t%d\n", ( int)m_pivots[ i + 1], m_counts[ i]);
+      fprintf( fo, "%d   %d\n", ( int)m_pivots[ i + 1], m_counts[ i]);
     }
   }
+  fprintf( fo, "\n\n");
 }

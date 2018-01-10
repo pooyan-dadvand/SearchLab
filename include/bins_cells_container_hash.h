@@ -130,6 +130,7 @@ public:
 
   void PrintStatistics() const;
   void PrintStatisticsHash() const;
+  void PrintDensitiesInFile( const char *filename) const;
   
 private:
   void SetNumberOfCells( std::array< std::size_t, Dimension > const &TheNumberOfCells ) {
@@ -314,3 +315,35 @@ inline void BinsCellsContainerHash::PrintStatistics() const {
     std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
     std::cout << "=== End of statistics === \n";
   }
+
+void BinsCellsContainerHash::PrintDensitiesInFile( const char *filename) const {
+  double lstPivots[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+			 10, 20, 30, 40, 50, 60, 70, 80, 90, 
+			 100, 200, 300, 400, 500, 600, 700, 800, 900, 
+			 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 
+			 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 
+			 1000000};
+
+  if ( filename && *filename) {
+    FILE *fo = fopen( filename, "a");
+    if ( fo) {  
+      fprintf( fo, "# Bin of %d x %d x %d = %lld cells.\n", 
+	       ( int)( this->GetNumberOfCells( 0 )), ( int)( this->GetNumberOfCells( 1 )), ( int)( this->GetNumberOfCells( 2 )), 
+	       ( long long)( this->GetNumberOfCells( 0 ) * this->GetNumberOfCells( 1 ) * this->GetNumberOfCells( 2 )));
+      IntervalCount ic( ( int)( sizeof( lstPivots) / sizeof( double)) - 1, lstPivots); // num Intervals = num Pivots - 1
+      for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
+        if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
+          std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
+          std::size_t numberOfPoints = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_end - lastOffset;
+          if ( numberOfPoints != 0 ) {
+            ic.countSample( ( double )numberOfPoints );
+          }
+        }
+      }
+      ic.printAsFile( fo);
+      fclose( fo);
+    }
+  } else {
+    std::cout << "Nothing to do in PrintDensitiesInFile, as filename is nullptr." << std::endl;
+  }
+}

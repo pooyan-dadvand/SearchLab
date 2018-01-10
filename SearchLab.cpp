@@ -203,10 +203,51 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
 #endif // USE_KRATOS
 
   bool do_guess_occupancy = true;
+  char filename_pnts[ 10240];
+  *filename_pnts = '\0';
   if ( G_PrintBinsStatistics && do_guess_occupancy ) {
     Crono clk;
     size_t gridFull[ 3 ] = { 0, 0, 0 };
     GetSuggestedGridSize( gridFull, points_vector);
+
+    char filename_scr[ 10240];
+    char filename_png[ 10240];
+    strcpy( filename_pnts, Filename.c_str());
+    char *ext = strrchr( filename_pnts, '.');
+    if ( !ext)
+      ext = &filename_pnts[ strlen( filename_pnts)];
+    strcpy( ext, "_gnuplot.dat");
+    strcpy( filename_scr, Filename.c_str());
+    ext = strrchr( filename_scr, '.');
+    if ( !ext)
+      ext = &filename_scr[ strlen( filename_scr)];
+    strcpy( ext, "_gnuplot.cmd");
+    strcpy( filename_png, Filename.c_str());
+    ext = strrchr( filename_png, '.');
+    if ( !ext)
+      ext = &filename_png[ strlen( filename_png)];
+    strcpy( ext, "_gnuplot.png");
+
+    FILE *fo = fopen( filename_scr, "w");
+    fprintf( fo, "set style line 1 lc rgb '#0060ad' lt 1 lw 2 pt 7 ps 1.5   # --- blue\n");
+    fprintf( fo, "set style line 2 lc rgb '#dd181f' lt 1 lw 2 pt 5 ps 1.5   # --- red\n");
+    fprintf( fo, "set style line 3 lc rgb '#18dd1f' lt 1 lw 2 pt 5 ps 1.5   # --- green\n");
+    fprintf( fo, "set style line 4 lc rgb '#dddd1f' lt 1 lw 2 pt 5 ps 1.5   # --- yellow\n");
+    fprintf( fo, "set logscale xy 10\n");
+    fprintf( fo, "set title '%s'\n", Filename.c_str());
+    fprintf( fo, "plot '%s' index 0 with linespoints ls 1 title '1/1000', ", filename_pnts);
+    fprintf( fo, " ''         index 1 with linespoints ls 2 title '1/100', ");
+    fprintf( fo, " ''         index 2 with linespoints ls 3 title '1/10', ");
+    fprintf( fo, " ''         index 3 with linespoints ls 4 title 'full' \n");
+    fprintf( fo, "set term png size 1280,720\n");
+    fprintf( fo, "set output '%s'\n", filename_png);
+    fprintf( fo, "replot\n");
+    fprintf( fo, "set term x11\n");
+    fclose( fo);
+
+    fo = fopen( filename_pnts, "w");
+    fprintf( fo, "# cell densities information for '%s'\n\n", Filename.c_str());
+    fclose( fo);
 
     int discretization = 1000; // get_ceil_prime( 1000);
     bool select_random_points = false;
@@ -215,20 +256,23 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     gridFull[ 2 ] = 0;
     // DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
     select_random_points = true;
-    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull, filename_pnts );
     discretization = 100; //get_ceil_prime( 100);
     // select_random_points = false;
     // DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
     select_random_points = true;
-    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull, filename_pnts );
     discretization = 10;//get_ceil_prime( 10);
     // select_random_points = false;
     // DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
     select_random_points = true;
-    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull, filename_pnts );
     
     float t = clk.fin();
     std::cout << "     statistics time = " << t << "s." << std::endl;
+    std::cout << "Created '" << filename_pnts << "' and '" << filename_scr << "'" << std::endl;
+    std::cout << "To generate '" << filename_png << "' try:" << std::endl;
+    std::cout << "     gnuplot " << filename_scr << std::endl;
   }
 
   // Point Interfaces
@@ -237,12 +281,12 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     std::cout << "Using PointsBins" << std::endl;
     PointsNew::RunTests< PointsBins< Point > >( "PointBins", points_vector, search_point, Radius,
 						numrepetitions, numrepetitions_nearest,
-						G_GridSize, G_PrintBinsStatistics);
+						G_GridSize, G_PrintBinsStatistics, filename_pnts);
   } else {
     std::cout << "Using PointsHash" << std::endl;
     PointsNew::RunTests< PointsBinsHash< Point > >( "PointBinsHash", points_vector, search_point, Radius,
 						    numrepetitions, numrepetitions_nearest,
-						    G_GridSize, G_PrintBinsStatistics );
+						    G_GridSize, G_PrintBinsStatistics, filename_pnts );
   }
 
 // - Old Interface

@@ -15,7 +15,7 @@ namespace PointsNew {
   template < class BinsType >
     void RunTests( char const Title[], std::vector< Point > &points_vector, const Point &search_point,
 		   double radius, std::size_t numsearch, std::size_t numsearch_nearest,
-		   const std::size_t GridSize[ 3], bool print_statistics ) {
+		   const std::size_t GridSize[ 3], bool print_statistics, const char *filename = nullptr ) {
     static bool first_time = true;
     double t0 = GetCurrentTime();
     BinsType bins( points_vector.begin(), points_vector.end(), GridSize );
@@ -23,6 +23,7 @@ namespace PointsNew {
 
     if ( print_statistics) {
       bins.PrintStatistics();
+      bins.PrintDensitiesInFile( filename);
     }
 
     // Header of timmings
