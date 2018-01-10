@@ -219,9 +219,9 @@ public:
         std::size_t idx = *it_idx;
         std::size_t idx_x, idx_y, idx_z;
         mCells.GetCellVectorIndices( idx, idx_x, idx_y, idx_z );
-        long long diff_x = abs( ( long long )idx_x - ( long long )idx_search_x ); // abs_diff( idx_x, idx_search_x );
-        long long diff_y = abs( ( long long )idx_y - ( long long )idx_search_y ); //abs_diff( idx_y, idx_search_y );
-        long long diff_z = abs( ( long long )idx_z - ( long long )idx_search_z ); //abs_diff( idx_z, idx_search_z );
+        long long diff_x = llabs( ( long long )idx_x - ( long long )idx_search_x ); // abs_diff( idx_x, idx_search_x );
+        long long diff_y = llabs( ( long long )idx_y - ( long long )idx_search_y ); //abs_diff( idx_y, idx_search_y );
+        long long diff_z = llabs( ( long long )idx_z - ( long long )idx_search_z ); //abs_diff( idx_z, idx_search_z );
         long long dist2 = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
         if ( dist2 < distance2_idx_nearest_cell ) {
           distance2_idx_nearest_cell = dist2;
@@ -256,9 +256,9 @@ public:
         std::size_t idx = *it_idx;
         std::size_t idx_x, idx_y, idx_z;
         mCells.GetCellVectorIndices( idx, idx_x, idx_y, idx_z );
-        long long diff_x = abs( ( long long )idx_x - ( long long )idx_search_x ); // abs_diff( idx_x, idx_search_x );
-        long long diff_y = abs( ( long long )idx_y - ( long long )idx_search_y ); //abs_diff( idx_y, idx_search_y );
-        long long diff_z = abs( ( long long )idx_z - ( long long )idx_search_z ); //abs_diff( idx_z, idx_search_z );
+        long long diff_x = llabs( ( long long )idx_x - ( long long )idx_search_x ); // abs_diff( idx_x, idx_search_x );
+        long long diff_y = llabs( ( long long )idx_y - ( long long )idx_search_y ); //abs_diff( idx_y, idx_search_y );
+        long long diff_z = llabs( ( long long )idx_z - ( long long )idx_search_z ); //abs_diff( idx_z, idx_search_z );
         long long dist2 = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
         if ( dist2 < search_radius ) {
           // look into the points of the cell
