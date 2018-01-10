@@ -180,11 +180,26 @@ inline void BinsCellsContainer::PrintStatisticsStdVector() const {
     
     bool detailed_statistics = true;
     if ( detailed_statistics ) {
-      std::cout << "Number of cells with only ( 1, <= 10, <= 100) points = ( "
-                << numCellsWithSinglePoint << ", " 
-                << numCellsWithLessThan10 << ", " 
-                << numCellsWithLessThan100 << ") " << std::endl;
-      IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
+      // std::cout << "Number of cells with only ( 1, <= 10, <= 100) points = ( "
+      //           << numCellsWithSinglePoint << ", " 
+      //           << numCellsWithLessThan10 << ", " 
+      //           << numCellsWithLessThan100 << ") " << std::endl;
+      // IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
+      // for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
+      //   lastOffset = this->GetCellBeginIndex( idx );
+      //   std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
+      //   if ( numberOfPoints2 != 0 ) {
+      //     ic.countSample( ( double )numberOfPoints2 );
+      //   }
+      // }
+      // ic.print();
+      double lstPivots[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                             10, 20, 30, 40, 50, 60, 70, 80, 90, 
+                             100, 200, 300, 400, 500, 600, 700, 800, 900, 
+                             1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 
+                             10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 
+                             2000000000};
+      IntervalCount ic( ( int)( sizeof( lstPivots) / sizeof( double)) - 1, lstPivots); // num Intervals = num Pivots - 1
       for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
         lastOffset = this->GetCellBeginIndex( idx );
         std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
@@ -192,7 +207,7 @@ inline void BinsCellsContainer::PrintStatisticsStdVector() const {
           ic.countSample( ( double )numberOfPoints2 );
         }
       }
-      ic.print();
+      ic.printAsFile();
     }
 }
 

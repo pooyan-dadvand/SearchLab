@@ -202,24 +202,33 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   Entities::PointIterator p_results = new Entities::PtrPointType[ max_results ];
 #endif // USE_KRATOS
 
-  bool do_guess_occupancy = false;
+  bool do_guess_occupancy = true;
   if ( G_PrintBinsStatistics && do_guess_occupancy ) {
+    Crono clk;
     size_t gridFull[ 3 ] = { 0, 0, 0 };
     GetSuggestedGridSize( gridFull, points_vector);
 
-    int discretization = 100;
+    int discretization = 1000; // get_ceil_prime( 1000);
     bool select_random_points = false;
     gridFull[ 0 ] = 0;
     gridFull[ 1 ] = 0;
     gridFull[ 2 ] = 0;
-    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    // DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
     select_random_points = true;
     DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
-    discretization = 10;
-    select_random_points = false;
-    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    discretization = 100; //get_ceil_prime( 100);
+    // select_random_points = false;
+    // DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
     select_random_points = true;
     DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    discretization = 10;//get_ceil_prime( 10);
+    // select_random_points = false;
+    // DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    select_random_points = true;
+    DoBinsStatistics( points_vector, discretization,  select_random_points, gridFull );
+    
+    float t = clk.fin();
+    std::cout << "     statistics time = " << t << "s." << std::endl;
   }
 
   // Point Interfaces
