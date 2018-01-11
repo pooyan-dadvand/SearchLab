@@ -5,9 +5,13 @@
 #include <iostream>
 #include <string>
 #include <sys/stat.h>
-#include <win_missing.h>
+#include "win_missing.h"
 
 #include <random>
+
+std::size_t G_TotalNumberOfPoints = 0;
+inline std::size_t GetTotalNumberOfPoints() { return G_TotalNumberOfPoints;}
+inline void SetTotalNumberOfPoints( std::size_t num) { G_TotalNumberOfPoints = num;}
 
 #ifdef USE_KRATOS
 // Ugly fixes
@@ -145,6 +149,8 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   max_point.id = 0;
   mid_point.id = 0;
 
+  SetTotalNumberOfPoints( npoints);
+
   for ( std::size_t i = 0; i < npoints; i++ ) {
     for ( std::size_t j = 0; j < 3; j++ ) {
       if ( min_point[ j ] > ( points_vector[ i ] )[ j ] )
@@ -234,11 +240,11 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     fprintf( fo, "set style line 3 lc rgb '#18dd1f' lt 1 lw 2 pt 5 ps 1.5   # --- green\n");
     fprintf( fo, "set style line 4 lc rgb '#dddd1f' lt 1 lw 2 pt 5 ps 1.5   # --- yellow\n");
     fprintf( fo, "set logscale xy 10\n");
-    fprintf( fo, "set title '%s'\n", Filename.c_str());
-    fprintf( fo, "plot '%s' index 0 with linespoints ls 1 title '1/1000', ", filename_pnts);
-    fprintf( fo, " ''         index 1 with linespoints ls 2 title '1/100', ");
-    fprintf( fo, " ''         index 2 with linespoints ls 3 title '1/10', ");
-    fprintf( fo, " ''         index 3 with linespoints ls 4 title 'full' \n");
+    fprintf( fo, "set title '%s ( normalized )'\n", Filename.c_str());
+    fprintf( fo, "plot '%s' using 1:3 index 0 with linespoints ls 1 title '1/1000', ", filename_pnts);
+    fprintf( fo, " '' using 1:3 index 1 with linespoints ls 2 title '1/100', ");
+    fprintf( fo, " '' using 1:3 index 2 with linespoints ls 3 title '1/10', ");
+    fprintf( fo, " '' using 1:3 index 3 with linespoints ls 4 title 'full' \n");
     fprintf( fo, "set term png size 1280,720\n");
     fprintf( fo, "set output '%s'\n", filename_png);
     fprintf( fo, "replot\n");

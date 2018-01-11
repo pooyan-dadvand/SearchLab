@@ -30,22 +30,24 @@ public:
   template < typename TIteratorType >
   BinsCellsContainerHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
 			  const std::size_t GridSize[ 3] )
-    : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ), m_numCells( 0), m_numUsedCells( 0) {
-    
-    std::size_t approximated_number_of_cells = std::distance( PointsBegin, PointsEnd );
-    
-    if ( approximated_number_of_cells == 0 )
-      return;
+    : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ), 
+      m_numCells( 0), m_numUsedCells( 0) {
+    CalculateBinsCells( PointsBegin, PointsEnd, GridSize);
+  }
 
-    CalculateCellSize( approximated_number_of_cells, GridSize );
-
-    InitializeCellsBeginIndices( PointsBegin, PointsEnd );
+  template < typename TIteratorType >
+  BinsCellsContainerHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+			  const std::size_t GridSize[ 3], 
+			  const BoundingBox< InternalPointType > &BBox )
+    : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( BBox ), 
+      m_numCells( 0), m_numUsedCells( 0) {
+    CalculateBinsCells( PointsBegin, PointsEnd, GridSize);
   }
 
   std::size_t GetNumberOfCells( std::size_t Axis ) const { return mNumberOfCells[ Axis ]; }
   std::size_t GetTotalNumberOfCells() const { return m_numCells;}
   std::size_t GetNumberOfUsedCells() const { return m_numUsedCells;}
-
+  BoundingBox< InternalPointType > GetBoundingBox() const { return mBoundingBox;}
   double GetCellSize( std::size_t Axis ) const { return mCellSize[ Axis ]; }
 
   // std::size_t GetCellBeginIndex( std::size_t Index ) const {
@@ -133,6 +135,20 @@ public:
   void PrintDensitiesInFile( const char *filename) const;
   
 private:
+
+  template < typename TIteratorType >
+  void CalculateBinsCells( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+			   const std::size_t GridSize[ 3]) {
+    std::size_t approximated_number_of_cells = std::distance( PointsBegin, PointsEnd );
+    
+    if ( approximated_number_of_cells == 0 )
+      return;
+    
+    CalculateCellSize( approximated_number_of_cells, GridSize );
+    
+    InitializeCellsBeginIndices( PointsBegin, PointsEnd );
+  }
+
   void SetNumberOfCells( std::array< std::size_t, Dimension > const &TheNumberOfCells ) {
     mNumberOfCells = TheNumberOfCells;
   }
@@ -322,7 +338,7 @@ void BinsCellsContainerHash::PrintDensitiesInFile( const char *filename) const {
 			 100, 200, 300, 400, 500, 600, 700, 800, 900, 
 			 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 
 			 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 
-			 1000000};
+			 100000};
 
   if ( filename && *filename) {
     FILE *fo = fopen( filename, "a");

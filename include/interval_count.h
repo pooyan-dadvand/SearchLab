@@ -94,9 +94,15 @@ void IntervalCount::print() const {
 
 void IntervalCount::printAsFile( FILE *fo) const {
   if ( m_numIntervals) {
-    fprintf( fo, "# points/cell   count\n");
+    std::size_t total_counts = 0;
     for ( int i = 0; i < m_numIntervals; i++) {
-      fprintf( fo, "%d   %d\n", ( int)m_pivots[ i + 1], m_counts[ i]);
+      total_counts +=m_counts[ i];
+    }
+    double factor = ( double)GetTotalNumberOfPoints() / ( double)total_counts;
+    fprintf( fo, "# points/cell   count count_normalized\n");
+    for ( int i = 0; i < m_numIntervals; i++) {
+      fprintf( fo, "%d   %d %g\n", ( int)m_pivots[ i + 1], m_counts[ i],
+	       ( double)m_counts[ i] * factor);
     }
   }
   fprintf( fo, "\n\n");

@@ -10,6 +10,8 @@ protected:
 public:
 	BoundingBox(TPointType const& MinPoint, TPointType const& MaxPoint) :
 		mMinPoint(MinPoint), mMaxPoint(MaxPoint) {}
+	BoundingBox( const BoundingBox &BBox) :
+		mMinPoint( BBox.mMinPoint), mMaxPoint( BBox.mMaxPoint) {}
 
 	template<typename TIteratorType>
 	BoundingBox(TIteratorType const& PointsBegin, TIteratorType const& PointsEnd) {
