@@ -9,6 +9,7 @@
 #include <iostream>
 #include <locale>
 
+#include "bounding_box.h"
 #include "bins_cells_container_hash.h"
 #include "spatial_search_result.h"
 
@@ -25,13 +26,25 @@ public:
   using ObjectType = TObjectType;
   using PointerType = TObjectType *;
   using ResultType = SpatialSearchResult< TObjectType >;
-
+  
   template < typename TIteratorType >
   PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
 		  const std::size_t GridSize[ 3] )
-    : mCells( PointsBegin, PointsEnd, GridSize ) {
-    mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
+    : mCells( PointsBegin, PointsEnd, GridSize ), m_PointBinsHelper( NULL) {
+    ReorderPoints( PointsBegin, PointsEnd);
+  }
 
+  template < typename TIteratorType >
+  PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+		  const std::size_t GridSize[ 3],
+		  const BoundingBox< InternalPointType > &BBox)
+    : mCells( PointsBegin, PointsEnd, GridSize, BBox ), m_PointBinsHelper( NULL) {
+    ReorderPoints( PointsBegin, PointsEnd);
+  }
+
+  template < typename TIteratorType >
+  void ReorderPoints( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd ) {
+    mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
     if ( mNumberOfPoints == 0 ) {
       mpPoints = nullptr;
       return;
@@ -39,7 +52,6 @@ public:
     mpPoints = new PointerType[ mNumberOfPoints ];
     for ( std::size_t i = 0; i < mNumberOfPoints; i++ )
       mpPoints[ i ] = nullptr;
-
     AssignPointsToCells( PointsBegin, PointsEnd );
   }
 
@@ -138,7 +150,9 @@ public:
     current_result.SetDistance2( std::numeric_limits< double >::max() );
     double radius = std::max( mCells.GetCellSize( 0 ), mCells.GetCellSize( 1 ) );
     radius = std::max( radius, mCells.GetCellSize( 2 ) ) * .5;
-
+    int n_checks = 0, n_visited = 0, n_loops = 0;
+    static bool first_time = true;
+    std::vector< std::size_t> lst_checked;
     while ( !current_result.IsObjectFound() && ( radius < limit_radius)) {
       InternalPointType min_point;
       std::array< std::size_t, Dimension > length;
@@ -156,9 +170,14 @@ public:
 	  for ( std::size_t i_x = 0; i_x < length[ 2 ]; i_x++) {
 	    auto x_position = y_position + i_x;
 	    std::size_t offset, end_offset;
+	    n_checks++;
 	    bool found = mCells.GetCellStoredOffsets( x_position, offset, end_offset);
+	    // if ( first_time) {
+	    //   lst_checked.push_back( x_position);
+	    // }
 	    if ( !found) continue;
 
+	    n_visited++;
 	    TObjectType **p_point = mpPoints + offset;//mCells.GetCellBeginIndex( y_position );
 	    for ( ; offset < end_offset; offset++ ) {
 	      double distance2 = Distance2( **p_point, ThePoint );
@@ -173,10 +192,45 @@ public:
         } // for i_y
       } // for i_z
       radius *= 2.00;
+      n_loops++;
+      // if ( first_time) {
+      // 	std::cout << "\n--- SearchNearestWithinRadius checked = " << n_checks 
+      // 		  << ", visited = " << n_visited
+      // 		  << ", loops = " << n_loops << std::endl;
+      // 	std::cout << "   checked = ";
+      // 	for ( auto idx = lst_checked.begin(); idx < lst_checked.end(); idx++) {
+      // 	  std::cout << *idx << ", ";
+      // 	}
+      // 	std::cout << std::endl;
+      // }
     }
+    // if ( first_time) {
+    //   first_time = false;
+    // }
     return current_result;
   }
- 
+
+  PointsBins< Point > *GetHelper() {
+    if ( !m_PointBinsHelper && ( mNumberOfPoints > 100)) {
+      // create auxiliarry points with the centre of the used cells and with the cell_id as tag
+      m_lstPointsHelper = new std::vector< Point >;
+
+      const std::vector< std::size_t> &lstUsedCells = mCells.GetListUsedCellIndices();
+      for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
+        std::size_t idx = *it_idx;
+        InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx );
+	Point tmp( cell_centre[ 0], cell_centre[ 1], cell_centre[ 2]);
+	tmp.tag = idx;
+	m_lstPointsHelper->push_back( tmp);
+      }
+      std::size_t GridSize[ 3] = { 0, 0, 0};
+      m_PointBinsHelper = new PointsBins< Point >( m_lstPointsHelper->begin(), m_lstPointsHelper->end(),
+						   GridSize, mCells.GetBoundingBox());
+      std::cout << "=== Helper bins with: " << m_lstPointsHelper->end() - m_lstPointsHelper->begin() << " points" << std::endl;
+      m_PointBinsHelper->PrintStatistics();
+    }
+    return m_PointBinsHelper;
+  }
 
   ResultType NewSearchNearest( TObjectType const &ThePoint ) {
     ResultType current_result;
@@ -187,56 +241,73 @@ public:
     double cell_diagonal = sqrt( mCells.GetCellSize( 0 ) * mCells.GetCellSize( 0 ) + 
 				 mCells.GetCellSize( 1 ) * mCells.GetCellSize( 1 ) + 
 				 mCells.GetCellSize( 2 ) * mCells.GetCellSize( 2 ));
-    double limit_radius = 2.0 * cell_diagonal; // look into ThePoint cell and surrounding cells of the 1st shell
+    double limit_radius = 1.0 * cell_diagonal; // look into ThePoint cell and surrounding cells of the 1st shell
 
     current_result = this->SearchNearestWithinRadius( ThePoint, limit_radius);
     if ( current_result.IsObjectFound()) {
       return current_result;
     }
 
-    // nearest point not found let's do a search over occupied cells
-    const std::vector< std::size_t> &lstUsedCells = mCells.GetListUsedCellIndices();
-
     // first round to get the closest cell centre to ThePoint
-    bool use_centre = true;
+    bool use_centre_points = true;//false;//true;
     double distance2_centre_nearest_cell = std::numeric_limits< double >::max();
     long long distance2_idx_nearest_cell = std::numeric_limits< long long >::max();
-    if ( use_centre ) {
-      for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
-        std::size_t idx = *it_idx;
-        InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx );
-        double distance2 = Distance2( Point( cell_centre[ 0 ], cell_centre[ 1 ], cell_centre[ 2 ] ), ThePoint );
-        if ( distance2 < distance2_centre_nearest_cell ) {
-          distance2_centre_nearest_cell = distance2;
-        }
+
+    bool use_helper_bins = false;//true;//false;
+    // using a helper bins:
+    if ( use_helper_bins) {
+      PointsBins< Point > *helper_bins = this->GetHelper();
+      if ( helper_bins) {
+	ResultType neareset_cell_centre = helper_bins->SearchNearest( ThePoint);
+	use_centre_points = true;
+	distance2_centre_nearest_cell = neareset_cell_centre.GetDistance2();
+	// rCurrentResult.Set( p_point ); // TObjectType *
+	// rCurrentResult.SetDistance2( distance2 );
+      } else {
+	use_helper_bins = false;
       }
-    } else {
-      std::size_t idx_search_cell = mCells.CalculateCellIndex( ThePoint );
-      std::size_t idx_search_x, idx_search_y, idx_search_z;
-      std::size_t idx_cell_min = 0;
-      mCells.GetCellVectorIndices( idx_search_cell, idx_search_x, idx_search_y, idx_search_z );
-      for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
-        std::size_t idx = *it_idx;
-        std::size_t idx_x, idx_y, idx_z;
-        mCells.GetCellVectorIndices( idx, idx_x, idx_y, idx_z );
-        long long diff_x = llabs( ( long long )idx_x - ( long long )idx_search_x ); // abs_diff( idx_x, idx_search_x );
-        long long diff_y = llabs( ( long long )idx_y - ( long long )idx_search_y ); //abs_diff( idx_y, idx_search_y );
-        long long diff_z = llabs( ( long long )idx_z - ( long long )idx_search_z ); //abs_diff( idx_z, idx_search_z );
-        long long dist2 = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
-        if ( dist2 < distance2_idx_nearest_cell ) {
-          distance2_idx_nearest_cell = dist2;
-          idx_cell_min = idx;
-        }
+    }
+
+    const std::vector< std::size_t> &lstUsedCells = mCells.GetListUsedCellIndices();
+    if ( !use_helper_bins) {
+      // nearest point not found let's do a search over occupied cells
+      if ( use_centre_points ) {
+	for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
+	  std::size_t idx = *it_idx;
+	  InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx );
+	  double distance2 = Distance2( Point( cell_centre[ 0 ], cell_centre[ 1 ], cell_centre[ 2 ] ), ThePoint );
+	  if ( distance2 < distance2_centre_nearest_cell ) {
+	    distance2_centre_nearest_cell = distance2;
+	  }
+	}
+      } else {
+	std::size_t idx_search_cell = mCells.CalculateCellIndex( ThePoint );
+	std::size_t idx_search_x, idx_search_y, idx_search_z;
+	std::size_t idx_cell_min = 0;
+	mCells.GetCellVectorIndices( idx_search_cell, idx_search_x, idx_search_y, idx_search_z );
+	for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
+	  std::size_t idx = *it_idx;
+	  std::size_t idx_x, idx_y, idx_z;
+	  mCells.GetCellVectorIndices( idx, idx_x, idx_y, idx_z );
+	  long long diff_x = llabs( ( long long )idx_x - ( long long )idx_search_x ); // abs_diff( idx_x, idx_search_x );
+	  long long diff_y = llabs( ( long long )idx_y - ( long long )idx_search_y ); //abs_diff( idx_y, idx_search_y );
+	  long long diff_z = llabs( ( long long )idx_z - ( long long )idx_search_z ); //abs_diff( idx_z, idx_search_z );
+	  long long dist2 = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z;
+	  if ( dist2 < distance2_idx_nearest_cell ) {
+	    distance2_idx_nearest_cell = dist2;
+	    idx_cell_min = idx;
+	  }
+	}
+	InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx_cell_min );
+	distance2_centre_nearest_cell = Distance2( Point( cell_centre[ 0 ], cell_centre[ 1 ], cell_centre[ 2 ] ), ThePoint );
       }
-      InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx_cell_min );
-      distance2_centre_nearest_cell = Distance2( Point( cell_centre[ 0 ], cell_centre[ 1 ], cell_centre[ 2 ] ), ThePoint );
     }
     
     if ( distance2_centre_nearest_cell == std::numeric_limits< double >::max()) // == no points in bin !!!
       return current_result;
 
     // now get the used cells within this point + radius
-    if ( use_centre ) {
+    if ( use_centre_points ) {
       double search_radius = distance2_centre_nearest_cell + cell_diagonal * 1.5;
       for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
         std::size_t idx = *it_idx;
@@ -283,6 +354,8 @@ private:
   std::size_t mNumberOfPoints;
   BinsCellsContainerHash mCells;
   TObjectType **mpPoints;
+  PointsBins< Point > *m_PointBinsHelper;
+  std::vector< Point > *m_lstPointsHelper;
 
   template < typename TIteratorType >
   void AssignPointsToCells( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd ) {

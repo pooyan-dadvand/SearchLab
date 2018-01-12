@@ -303,7 +303,9 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::PrintStatistics() const
   std::size_t count = 0;
   std::cout << "Hash entry XXXX = (  key, data, age)" << std::endl;
   std::cout.imbue( prev_loc); // restore previous locale, i.e. without thousand separators
+  std::size_t sum_age = 0;
   for ( const auto &entry : m_HashTable ) {
+    sum_age += entry.getAge();
     count += ( entry.getAge() != 0);
     // if ( entry.getAge()) {
     //   std::cout << "Hash entry " << count << " = ( " << entry.getKey() << ", " << entry.getData() << ", " << ( int)( entry.getAge()) << ")" << std::endl;
@@ -313,6 +315,7 @@ inline void ParallelCoherentHash< TDataType, t_KeyType>::PrintStatistics() const
   std::cout << " Used number of elements in hash table = " << count << std::endl;
   std::cout << "Configured load factor = " << LOAD_FACTOR << " vs real load factor = " << ( double)count / ( double)m_Size << std::endl;
   std::cout << "Maximum age = " << ( int)m_TableMaximumAge << std::endl;
+  std::cout << "Average age = " << ( double)sum_age / ( double)count << std::endl;
   std::size_t total_size = sizeof( *this) + sizeHashTable + sizeOffsetTable;
   std::cout << "Total size in bytes = " << total_size << " = " << ( double)total_size / ( 1024.0 * 1024.0) << " MB" << std::endl;
   std::cout.imbue( prev_loc); // restore previous locale, i.e. without thousand separators

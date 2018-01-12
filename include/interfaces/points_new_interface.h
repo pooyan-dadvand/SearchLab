@@ -21,8 +21,8 @@ namespace PointsNew {
     BinsType bins( points_vector.begin(), points_vector.end(), GridSize );
     double t1 = GetCurrentTime();
 
-    if ( print_statistics) {
       bins.PrintStatistics();
+    if ( print_statistics) {
       bins.PrintDensitiesInFile( filename);
     }
 

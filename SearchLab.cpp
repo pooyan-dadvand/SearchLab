@@ -12,6 +12,12 @@
 std::size_t G_TotalNumberOfPoints = 0;
 inline std::size_t GetTotalNumberOfPoints() { return G_TotalNumberOfPoints;}
 inline void SetTotalNumberOfPoints( std::size_t num) { G_TotalNumberOfPoints = num;}
+std::size_t G_MaxNumberOfCells = 0;
+inline std::size_t GetMaxNumberOfCells() { return G_MaxNumberOfCells;}
+inline void SetMaxNumberOfCells( std::size_t num) { G_MaxNumberOfCells = num;}
+std::size_t G_CurrentNumberOfCells = 0;
+inline std::size_t GetCurrentNumberOfCells() { return G_CurrentNumberOfCells;}
+inline void SetCurrentNumberOfCells( std::size_t num) { G_CurrentNumberOfCells = num;}
 
 #ifdef USE_KRATOS
 // Ugly fixes
@@ -215,6 +221,8 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     Crono clk;
     size_t gridFull[ 3 ] = { 0, 0, 0 };
     GetSuggestedGridSize( gridFull, points_vector);
+    SetTotalNumberOfPoints( npoints);
+    SetMaxNumberOfCells( gridFull[ 0 ] * gridFull[ 1 ] * gridFull[ 2 ]);
 
     char filename_scr[ 10240];
     char filename_png[ 10240];
@@ -232,7 +240,9 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     ext = strrchr( filename_png, '.');
     if ( !ext)
       ext = &filename_png[ strlen( filename_png)];
-    strcpy( ext, "_gnuplot.png");
+    int x_idx = 3 ; // 1 or 3;
+    int y_idx = 4 ; // 2 or 4;
+    sprintf( ext, "_gnuplot_x=%d_y=%d.png", x_idx, y_idx);
 
     FILE *fo = fopen( filename_scr, "w");
     fprintf( fo, "set style line 1 lc rgb '#0060ad' lt 1 lw 2 pt 7 ps 1.5   # --- blue\n");
@@ -241,14 +251,26 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     fprintf( fo, "set style line 4 lc rgb '#dddd1f' lt 1 lw 2 pt 5 ps 1.5   # --- yellow\n");
     fprintf( fo, "set logscale xy 10\n");
     fprintf( fo, "set title '%s ( normalized )'\n", Filename.c_str());
-    fprintf( fo, "plot '%s' using 1:3 index 0 with linespoints ls 1 title '1/1000', ", filename_pnts);
-    fprintf( fo, " '' using 1:3 index 1 with linespoints ls 2 title '1/100', ");
-    fprintf( fo, " '' using 1:3 index 2 with linespoints ls 3 title '1/10', ");
-    fprintf( fo, " '' using 1:3 index 3 with linespoints ls 4 title 'full' \n");
+    if ( x_idx == 1) {
+      fprintf( fo, "set xlabel '# points/cell'\n");
+    }
+    if ( y_idx == 2) {
+      fprintf( fo, "set ylabel '# cells'\n");
+    }
+    if ( x_idx == 3) {
+      fprintf( fo, "set xlabel '# points/cell (normalized by # points)'\n");
+    }
+    if ( y_idx == 4) {
+      fprintf( fo, "set ylabel '# cells (normalized by # cells)'\n");
+    }
+    fprintf( fo, "plot '%s' using %d:%d index 0 with linespoints ls 1 title '1/1000', ", filename_pnts, x_idx, y_idx);
+    fprintf( fo,       " '' using %d:%d index 1 with linespoints ls 2 title '1/100', ", x_idx, y_idx);
+    fprintf( fo,       " '' using %d:%d index 2 with linespoints ls 3 title '1/10', ", x_idx, y_idx);
+    fprintf( fo,       " '' using %d:%d index 3 with linespoints ls 4 title 'full' \n", x_idx, y_idx);
     fprintf( fo, "set term png size 1280,720\n");
     fprintf( fo, "set output '%s'\n", filename_png);
     fprintf( fo, "replot\n");
-    fprintf( fo, "set term x11\n");
+    // fprintf( fo, "set term x11\n");
     fclose( fo);
 
     fo = fopen( filename_pnts, "w");

@@ -249,10 +249,12 @@ void BinsCellsContainer::PrintDensitiesInFile( const char *filename) const {
 
   if ( filename && *filename) {
     FILE *fo = fopen( filename, "a");
-    if ( fo) {  
+    if ( fo) {
+      std::size_t num_cells = this->GetNumberOfCells( 0 ) * this->GetNumberOfCells( 1 ) * this->GetNumberOfCells( 2 );
+      SetCurrentNumberOfCells( num_cells);
       fprintf( fo, "# Bin of %d x %d x %d = %lld cells.\n", 
 	       ( int)( this->GetNumberOfCells( 0 )), ( int)( this->GetNumberOfCells( 1 )), ( int)( this->GetNumberOfCells( 2 )), 
-	       ( long long)( this->GetNumberOfCells( 0 ) * this->GetNumberOfCells( 1 ) * this->GetNumberOfCells( 2 )));
+	       ( long long)num_cells);
       IntervalCount ic( ( int)( sizeof( lstPivots) / sizeof( double)) - 1, lstPivots); // num Intervals = num Pivots - 1
       for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
 	std::size_t lastOffset = this->GetCellBeginIndex( idx );

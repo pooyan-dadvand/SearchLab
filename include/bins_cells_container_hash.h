@@ -47,8 +47,8 @@ public:
   std::size_t GetNumberOfCells( std::size_t Axis ) const { return mNumberOfCells[ Axis ]; }
   std::size_t GetTotalNumberOfCells() const { return m_numCells;}
   std::size_t GetNumberOfUsedCells() const { return m_numUsedCells;}
-  BoundingBox< InternalPointType > GetBoundingBox() const { return mBoundingBox;}
   double GetCellSize( std::size_t Axis ) const { return mCellSize[ Axis ]; }
+  BoundingBox< InternalPointType > GetBoundingBox() const { return mBoundingBox;}
 
   // std::size_t GetCellBeginIndex( std::size_t Index ) const {
   //   bool found = false;

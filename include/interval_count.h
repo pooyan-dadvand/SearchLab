@@ -8,10 +8,12 @@
 class IntervalCount {
 public:
   IntervalCount(): m_pivots( NULL), m_counts( NULL) {}
-  IntervalCount( int numIntervals, double minPivot, double maxPivot): m_pivots( NULL), m_counts( NULL) {
+  IntervalCount( int numIntervals, double minPivot, double maxPivot): 
+    m_pivots( NULL), m_counts( NULL), m_accumulated_sample_values( 0.0) {
     defineIntervals( numIntervals, minPivot, maxPivot);
   }
-  IntervalCount( int numIntervals, const double *lstPivots): m_pivots( NULL), m_counts( NULL) {
+  IntervalCount( int numIntervals, const double *lstPivots): 
+    m_pivots( NULL), m_counts( NULL), m_accumulated_sample_values( 0.0) {
     defineIntervals( numIntervals, lstPivots);
   }
   void defineIntervals( int numIntervals, double minPivot, double maxPivot);
@@ -23,6 +25,7 @@ private:
   int m_numIntervals;
   double *m_pivots;
   int *m_counts;
+  double m_accumulated_sample_values;
 };
 
 void IntervalCount::defineIntervals( int numIntervals, double minPivot, double maxPivot) {
@@ -66,7 +69,8 @@ void IntervalCount::countSample( double value) {
   if ( m_numIntervals) {
     for ( int i = 1; i < m_numIntervals + 1; i++) {
       if ( value <= m_pivots[ i]) {
-	m_counts[ i - 1]++;
+	m_counts[ i - 1]++; // 1 cell with that many points
+	m_accumulated_sample_values += value; // add number of points
 	break;
       }
     }
@@ -98,11 +102,14 @@ void IntervalCount::printAsFile( FILE *fo) const {
     for ( int i = 0; i < m_numIntervals; i++) {
       total_counts +=m_counts[ i];
     }
-    double factor = ( double)GetTotalNumberOfPoints() / ( double)total_counts;
-    fprintf( fo, "# points/cell   count count_normalized\n");
+    double factor_points = ( double)GetTotalNumberOfPoints() / m_accumulated_sample_values;
+    double factor_cells = ( double)GetMaxNumberOfCells()/ ( double)GetCurrentNumberOfCells();
+    fprintf( fo, "# Number of points = %lld\n", ( long long int)m_accumulated_sample_values);
+    fprintf( fo, "#_points/cell   count   #_points/cell_normalized   count_normalized\n");
     for ( int i = 0; i < m_numIntervals; i++) {
-      fprintf( fo, "%d   %d %g\n", ( int)m_pivots[ i + 1], m_counts[ i],
-	       ( double)m_counts[ i] * factor);
+      fprintf( fo, "%d   %d   %g   %g\n", ( int)m_pivots[ i + 1], m_counts[ i],
+	       ( double)( int)m_pivots[ i + 1] * factor_points, // 1st to int to get the integer part only
+	       ( double)m_counts[ i] * factor_cells);
     }
   }
   fprintf( fo, "\n\n");

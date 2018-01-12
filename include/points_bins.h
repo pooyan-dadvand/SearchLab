@@ -25,17 +25,27 @@ public:
   PointsBins( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
 	      const std::size_t GridSize[ 3] )
     : mCells( PointsBegin, PointsEnd, GridSize ) {
-    mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
+    ReorderPoints( PointsBegin, PointsEnd);
+  }
 
+  template < typename TIteratorType >
+  PointsBins( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+	      const std::size_t GridSize[ 3],
+	      const BoundingBox< InternalPointType > &BBox)
+    : mCells( PointsBegin, PointsEnd, GridSize, BBox ) {
+    ReorderPoints( PointsBegin, PointsEnd);
+  }
+
+  template < typename TIteratorType >
+  void ReorderPoints( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd ) {
+    mNumberOfPoints = std::distance( PointsBegin, PointsEnd );
     if ( mNumberOfPoints == 0 ) {
       mpPoints = nullptr;
       return;
     }
-
     mpPoints = new PointerType[ mNumberOfPoints ];
     for ( std::size_t i = 0; i < mNumberOfPoints; i++ )
       mpPoints[ i ] = nullptr;
-
     AssignPointsToCells( PointsBegin, PointsEnd );
   }
 
