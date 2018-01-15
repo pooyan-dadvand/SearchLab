@@ -151,7 +151,7 @@ public:
     double radius = std::max( mCells.GetCellSize( 0 ), mCells.GetCellSize( 1 ) );
     radius = std::max( radius, mCells.GetCellSize( 2 ) ) * .5;
     int n_checks = 0, n_visited = 0, n_loops = 0;
-    static bool first_time = true;
+    static bool first_time = false; // true;// also to disable printing visited cells
     std::vector< std::size_t> lst_checked;
     while ( !current_result.IsObjectFound() && ( radius < limit_radius)) {
       InternalPointType min_point;
@@ -172,9 +172,9 @@ public:
 	    std::size_t offset, end_offset;
 	    n_checks++;
 	    bool found = mCells.GetCellStoredOffsets( x_position, offset, end_offset);
-	    // if ( first_time) {
-	    //   lst_checked.push_back( x_position);
-	    // }
+	    if ( first_time) {
+	      lst_checked.push_back( x_position);
+	    }
 	    if ( !found) continue;
 
 	    n_visited++;
@@ -193,20 +193,20 @@ public:
       } // for i_z
       radius *= 2.00;
       n_loops++;
-      // if ( first_time) {
-      // 	std::cout << "\n--- SearchNearestWithinRadius checked = " << n_checks 
-      // 		  << ", visited = " << n_visited
-      // 		  << ", loops = " << n_loops << std::endl;
-      // 	std::cout << "   checked = ";
-      // 	for ( auto idx = lst_checked.begin(); idx < lst_checked.end(); idx++) {
-      // 	  std::cout << *idx << ", ";
-      // 	}
-      // 	std::cout << std::endl;
-      // }
+      if ( first_time) {
+      	std::cout << "\n--- SearchNearestWithinRadius checked = " << n_checks 
+      		  << ", visited = " << n_visited
+      		  << ", loops = " << n_loops << std::endl;
+      	std::cout << "   checked = ";
+      	for ( auto idx = lst_checked.begin(); idx < lst_checked.end(); idx++) {
+      	  std::cout << *idx << ", ";
+      	}
+      	std::cout << std::endl;
+      }
     }
-    // if ( first_time) {
-    //   first_time = false;
-    // }
+    if ( first_time) {
+      first_time = false;
+    }
     return current_result;
   }
 
