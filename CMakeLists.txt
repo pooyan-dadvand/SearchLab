@@ -1,3 +1,4 @@
+# -*- cmake -*-
 #cmake_minimum_required(VERSION 3.2)
 cmake_minimum_required(VERSION 2.8)
 
@@ -21,7 +22,7 @@ if (WIN32)
     message( "ZLIB: trying to guess Zlib location")
   endif( EXISTS C:/GID64-git/libZ/zlib-1.2.11)
 else (WIN32)
-  set(CACHE CMAKE_BUILD_TYPE "Release" CACHE STRING "Select build type")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Select build type")
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS None Debug Release RelWithDebInfo MinSizeRel)
 endif (WIN32)
 
