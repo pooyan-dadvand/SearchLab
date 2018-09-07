@@ -145,8 +145,8 @@ public:
     return result;
   }
 
-  void PrintStatistics() const;
-  void PrintStatisticsHash() const;
+  void PrintStatistics( bool print_statistics) const;
+  void PrintStatisticsHash( bool print_statistics) const;
   void PrintDensitiesInFile( const char *filename) const;
   
 private:
@@ -287,8 +287,11 @@ inline void BinsCellsContainerHash::InitializeCellsBeginIndices( TIteratorType c
   }
 }
 
-inline void BinsCellsContainerHash::PrintStatisticsHash() const {
-    m_PCHCellsBeginIndices.PrintStatistics();
+inline void BinsCellsContainerHash::PrintStatisticsHash( bool print_statistics) const {
+  // if !print_statistics --> print only bins size
+    m_PCHCellsBeginIndices.PrintStatistics( print_statistics);
+    if ( !print_statistics)
+      return;
     std::size_t numUsedCells = 0;
     std::size_t totNumPoints = 0;
     std::size_t minNumPoints = this->GetTotalNumberOfCells(); // a big number like any other...
@@ -344,9 +347,9 @@ inline void BinsCellsContainerHash::PrintStatisticsHash() const {
     }
 }
 
-inline void BinsCellsContainerHash::PrintStatistics() const {
+inline void BinsCellsContainerHash::PrintStatistics( bool print_statistics) const {
+  // if !print_statistics --> print only bins size
     // Bins statistics
-    std::cout << "=== Bins statistics === \n";
     std::locale prev_loc = std::cout.getloc();
     std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
     std::cout << "Bin of ";
@@ -360,11 +363,16 @@ inline void BinsCellsContainerHash::PrintStatistics() const {
     std::cout << " = " << numberOfCells << " cells" << std::endl;
     std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
 
-    std::cout << "Using ParallelCoherentHash" << std::endl;
-    this->PrintStatisticsHash();
+    if ( print_statistics) {
+      std::cout << "=== Bins statistics === \n";
+      std::cout << "Using ParallelCoherentHash" << std::endl;
+    }
+      this->PrintStatisticsHash( print_statistics);
+    if ( print_statistics) {
+      std::cout << "=== End of statistics === \n";
+    }
 
     std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
-    std::cout << "=== End of statistics === \n";
   }
 
 void BinsCellsContainerHash::PrintDensitiesInFile( const char *filename) const {

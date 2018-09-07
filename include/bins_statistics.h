@@ -52,7 +52,7 @@ inline void DoBinsStatistics( const std::vector< Point> &points_vector,
     // size_t grid_sample[ 3 ] = { 0, 0, 0 }; // = { 55, 55, 55 };
     BinsCellsContainer cells_sample( points_sample.begin(), points_sample.end(), grid_sample );
     // float t = clk.fin();
-    cells_sample.PrintStatistics();
+    cells_sample.PrintStatistics( false);
     // std::cout << "     bins time = " << t << "s." << std::endl;
     cells_sample.PrintDensitiesInFile( filename);
   }

@@ -28,7 +28,7 @@ namespace PointsNew {
     }
     double t1 = GetCurrentTime();
 
-      bins->PrintStatistics();
+    bins->PrintStatistics( print_statistics);
     if ( print_statistics) {
       bins->PrintDensitiesInFile( filename);
     }
@@ -88,6 +88,8 @@ namespace PointsNew {
     t1 = GetCurrentTime();
     std::cout << t1 - t0 << "\t" << results.size() << "\t" << *( nearest_point_result.Get());
     std::cout << std::endl;
+
+    std::cout << "Nearest point = " << *( nearest_point_result.Get()) << std::endl;
 
     delete bins;
   }

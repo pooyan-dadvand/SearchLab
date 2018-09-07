@@ -94,7 +94,7 @@ public:
   }
 
   void PrintGridSize() const;
-  void PrintStatistics() const;
+  void PrintStatistics( bool print_statistics) const;
   void PrintStatisticsStdVector() const;
   void PrintDensitiesInFile( const char *filename) const;
   
@@ -261,19 +261,22 @@ inline void BinsCellsContainer::PrintGridSize() const {
   std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
 }
 
-inline void BinsCellsContainer::PrintStatistics() const {
+inline void BinsCellsContainer::PrintStatistics( bool print_statistics) const {
+  // if !print_statistics --> print only bins size
   // Bins statistics
-  std::cout << "=== Bins statistics === \n";
   this->PrintGridSize();
-  std::locale prev_loc = std::cout.getloc();
-  std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
-  // std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
-
-  // std::cout << "Using std::vector" << std::endl;
-  this->PrintStatisticsStdVector();
-
-  std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
-  std::cout << "=== End of statistics === \n";
+  if ( print_statistics) {
+    std::cout << "=== Bins statistics === \n";
+    std::locale prev_loc = std::cout.getloc();
+    std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
+    // std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
+    
+    // std::cout << "Using std::vector" << std::endl;
+    this->PrintStatisticsStdVector();
+    
+    std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
+    std::cout << "=== End of statistics === \n";
+  }
 }
 
 void BinsCellsContainer::PrintDensitiesInFile( const char *filename) const {

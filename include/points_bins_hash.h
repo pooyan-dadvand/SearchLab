@@ -240,7 +240,7 @@ public:
       m_PointBinsHelper = new PointsBins< Point >( m_lstPointsHelper->begin(), m_lstPointsHelper->end(),
 						   GridSize, mCells.GetBoundingBox());
       std::cout << "=== Helper bins with: " << m_lstPointsHelper->end() - m_lstPointsHelper->begin() << " points" << std::endl;
-      m_PointBinsHelper->PrintStatistics();
+      m_PointBinsHelper->PrintStatistics( false);
     }
     return m_PointBinsHelper;
   }
@@ -303,9 +303,9 @@ public:
     return current_result;
   }
 
-  void PrintStatistics() const {
+  void PrintStatistics( bool print_statistics) const {
     // Bins statistics
-    mCells.PrintStatistics();
+    mCells.PrintStatistics( print_statistics);
   }
 
   void PrintDensitiesInFile( const char *filename) const {

@@ -144,7 +144,10 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   }
   std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
   double t1 = GetCurrentTime();
-  std::cout << "Reading file = " << t1 - t0 << " sec." << std::endl;
+
+  if ( G_PrintBinsStatistics) {
+    std::cout << "Reading file = " << t1 - t0 << " sec." << std::endl;
+  }
 
   Point min_point( points_vector[ 0 ] );
   Point max_point( points_vector[ 0 ] );
@@ -364,7 +367,7 @@ void testParallelCoherentHash() {
     pch.getDataRef( key)++;
     // printf( "id[ %4d] = %d\n", key, pch.getData( key));
   }
-  pch.PrintStatistics();
+  pch.PrintStatistics( true);
 }
 
 void PrintUsage( const std::string &progname, const std::string &filename, double radius) {
