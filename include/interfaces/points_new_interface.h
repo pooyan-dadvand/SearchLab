@@ -18,12 +18,19 @@ namespace PointsNew {
 		   const std::size_t GridSize[ 3], bool print_statistics, const char *filename = nullptr ) {
     static bool first_time = true;
     double t0 = GetCurrentTime();
-    BinsType bins( points_vector.begin(), points_vector.end(), GridSize );
+    BinsType *bins = nullptr;
+
+    if ( ( GridSize[ 0] == 0) || ( GridSize[ 1] == 0) || ( GridSize[ 2] == 0)) {
+      // to specify a custom gridSize
+      bins = new BinsType( points_vector.begin(), points_vector.end());
+    } else {
+      bins = new BinsType( points_vector.begin(), points_vector.end(), GridSize );
+    }
     double t1 = GetCurrentTime();
 
-      bins.PrintStatistics();
+      bins->PrintStatistics();
     if ( print_statistics) {
-      bins.PrintDensitiesInFile( filename);
+      bins->PrintDensitiesInFile( filename);
     }
 
     // Header of timmings
@@ -50,7 +57,7 @@ namespace PointsNew {
 #pragma omp parallel for firstprivate( results )
     for ( std::size_t i = 0; i < numsearch; i++ ) {
       results.clear();
-      bins.SearchInRadius( search_point, radius, results );
+      bins->SearchInRadius( search_point, radius, results );
     }
     t1 = GetCurrentTime();
     std::cout << t1 - t0 << "\t";
@@ -59,7 +66,7 @@ namespace PointsNew {
     t0 = GetCurrentTime();
     for ( std::size_t i = 0; i < numsearch; i++ ) {
       results.clear();
-      bins.SearchInRadius( search_point, radius, results );
+      bins->SearchInRadius( search_point, radius, results );
     }
     t1 = GetCurrentTime();
     std::cout << t1 - t0 << "\t";
@@ -68,7 +75,7 @@ namespace PointsNew {
     t0 = GetCurrentTime();
 #pragma omp parallel for firstprivate( nearest_point_result )
     for ( std::size_t i = 0; i < numsearch_nearest; i++ ) {
-      nearest_point_result = bins.SearchNearest( search_point );
+      nearest_point_result = bins->SearchNearest( search_point );
     }
     t1 = GetCurrentTime();
     std::cout << t1 - t0 << "\t";
@@ -76,10 +83,12 @@ namespace PointsNew {
     // Search Nearest Parallel? SERial + NOFR? and Neares Point 
     t0 = GetCurrentTime();
     for ( std::size_t i = 0; i < numsearch_nearest; i++ ) {
-      nearest_point_result = bins.SearchNearest( search_point );
+      nearest_point_result = bins->SearchNearest( search_point );
     }
     t1 = GetCurrentTime();
     std::cout << t1 - t0 << "\t" << results.size() << "\t" << *( nearest_point_result.Get());
     std::cout << std::endl;
+
+    delete bins;
   }
 }

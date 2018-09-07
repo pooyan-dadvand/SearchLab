@@ -14,6 +14,10 @@ build/*
 
 # Ignore big case file folder
 cases/big/*
+# statistic files: images and gnuplot scripts and graphs
+cases/*png
+cases/*cmd
+cases/*dat
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

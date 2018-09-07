@@ -21,9 +21,24 @@ public:
 
   template < typename TIteratorType >
   BinsCellsContainer( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+		      bool initialize_cells = true )
+    : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ) {
+    CalculateBinsCells( PointsBegin, PointsEnd, initialize_cells);
+  }
+
+  template < typename TIteratorType >
+  BinsCellsContainer( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+		      const BoundingBox< InternalPointType > &BBox, bool initialize_cells = true )
+    : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( BBox ) {
+    CalculateBinsCells( PointsBegin, PointsEnd, initialize_cells);
+  }
+
+  // to specify a custom gridSize
+  template < typename TIteratorType >
+  BinsCellsContainer( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
 		      const std::size_t GridSize[ 3], bool initialize_cells = true )
     : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( PointsBegin, PointsEnd ) {
-    CalculateBinsCells( PointsBegin, PointsEnd, GridSize, initialize_cells);
+    CalculateBinsCellsForUserGridSize( PointsBegin, PointsEnd, GridSize, initialize_cells);
   }
 
   template < typename TIteratorType >
@@ -31,7 +46,7 @@ public:
 		      const std::size_t GridSize[ 3], 
 		      const BoundingBox< InternalPointType > &BBox, bool initialize_cells = true )
     : mNumberOfCells( { { 1, 1, 1 } } ), mBoundingBox( BBox ) {
-    CalculateBinsCells( PointsBegin, PointsEnd, GridSize, initialize_cells);
+    CalculateBinsCellsForUserGridSize( PointsBegin, PointsEnd, GridSize, initialize_cells);
   }
 
   void SetNumberOfCells( std::array< std::size_t, Dimension > const &TheNumberOfCells ) {
@@ -86,19 +101,19 @@ public:
 private:
   template < typename TIteratorType >
   void CalculateBinsCells( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
-			   const std::size_t GridSize[ 3], bool initialize_cells = true) {
+			   bool initialize_cells = true) {
     std::size_t approximated_number_of_cells = std::distance( PointsBegin, PointsEnd );
     
     if ( approximated_number_of_cells == 0 )
       return;
     
-    CalculateCellSize( approximated_number_of_cells, GridSize );
+    CalculateCellSize( approximated_number_of_cells);
     
     if ( initialize_cells )
       InitializeCellsBeginIndices( PointsBegin, PointsEnd );
   }
 
-  void CalculateCellSize( std::size_t ApproximatedSize, const std::size_t GridSize[ 3] ) {
+  void CalculateCellSize( std::size_t ApproximatedSize ) {
     std::size_t average_number_of_cells = static_cast< std::size_t >(
         std::pow( static_cast< double >( ApproximatedSize ), 1.00 / Dimension ) );
     std::array< double, 3 > lengths;
@@ -109,31 +124,53 @@ private:
     }
     average_length *= 1.00 / 3.00;
 
-    if ( ( GridSize[ 0] == 0) || ( GridSize[ 1] == 0) || ( GridSize[ 2] == 0)) {
-      if ( average_length < std::numeric_limits< double >::epsilon() ) {
-	SetNumberOfCells( { { 1, 1, 1 } } );
-	return;
-      }
+    if ( average_length < std::numeric_limits< double >::epsilon() ) {
+      SetNumberOfCells( { { 1, 1, 1 } } );
+      return;
+    }
+    
+    for ( int i = 0; i < Dimension; i++ ) {
+      SetNumberOfCells( i, static_cast< std::size_t >( lengths[ i] / average_length * ( double)average_number_of_cells) + 1);
+      if ( mNumberOfCells[ i ] > 1 )
+	mCellSize[ i ] = lengths[ i ] / ( double)mNumberOfCells[ i ];
+      else
+	mCellSize[ i ] = average_length;
       
-      for ( int i = 0; i < Dimension; i++ ) {
-	SetNumberOfCells( i, static_cast< std::size_t >( lengths[ i] / average_length * ( double)average_number_of_cells) + 1);
-	if ( mNumberOfCells[ i ] > 1 )
-	  mCellSize[ i ] = lengths[ i ] / ( double)mNumberOfCells[ i ];
-	else
-	  mCellSize[ i ] = average_length;
-	
-	mInverseOfCellSize[ i ] = 1.00 / mCellSize[ i ];
-      }
-    } else { // User defined grid size
-      for ( int i = 0; i < Dimension; i++ ) {
-	SetNumberOfCells( i, GridSize[ i]);
-	if ( mNumberOfCells[ i ] > 1 )
-	  mCellSize[ i ] = lengths[ i ] / ( double)mNumberOfCells[ i ];
-	else
-	  mCellSize[ i ] = average_length;
-	
-	mInverseOfCellSize[ i ] = 1.00 / mCellSize[ i ];
-      }
+      mInverseOfCellSize[ i ] = 1.00 / mCellSize[ i ];
+    }
+  }
+
+  template < typename TIteratorType >
+  void CalculateBinsCellsForUserGridSize( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
+					  const std::size_t GridSize[ 3], bool initialize_cells = true) {
+    std::size_t approximated_number_of_cells = std::distance( PointsBegin, PointsEnd );
+    
+    if ( approximated_number_of_cells == 0 )
+      return;
+    
+    CalculateCellSizeForUserGridSize( GridSize );
+    
+    if ( initialize_cells )
+      InitializeCellsBeginIndices( PointsBegin, PointsEnd );
+  }
+  void CalculateCellSizeForUserGridSize( const std::size_t GridSize[ 3] ) {
+    std::array< double, 3 > lengths;
+    double average_length = 0.00;
+    for ( int i = 0; i < Dimension; i++ ) {
+      lengths[ i ] = mBoundingBox.GetMaxPoint()[ i ] - mBoundingBox.GetMinPoint()[ i ];
+      average_length += lengths[ i ];
+    }
+    average_length *= 1.00 / 3.00;
+
+    // User defined grid size
+    for ( int i = 0; i < Dimension; i++ ) {
+      SetNumberOfCells( i, GridSize[ i]);
+      if ( mNumberOfCells[ i ] > 1 )
+	mCellSize[ i ] = lengths[ i ] / ( double)mNumberOfCells[ i ];
+      else
+	mCellSize[ i ] = average_length;
+      
+      mInverseOfCellSize[ i ] = 1.00 / mCellSize[ i ];
     }
   }
 
