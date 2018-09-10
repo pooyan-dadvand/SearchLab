@@ -29,14 +29,14 @@ public:
   
   template < typename TIteratorType >
   PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd )
-    : mCells( PointsBegin, PointsEnd), m_PointBinsHelper( NULL) {
+    : mCells( PointsBegin, PointsEnd) {
     ReorderPoints( PointsBegin, PointsEnd);
   }
 
   template < typename TIteratorType >
   PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
 		  const BoundingBox< InternalPointType > &BBox)
-    : mCells( PointsBegin, PointsEnd, BBox ), m_PointBinsHelper( NULL) {
+    : mCells( PointsBegin, PointsEnd, BBox ) {
     ReorderPoints( PointsBegin, PointsEnd);
   }
 
@@ -44,14 +44,14 @@ public:
   template < typename TIteratorType >
   PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
 		  const std::size_t GridSize[ 3] )
-    : mCells( PointsBegin, PointsEnd, GridSize ), m_PointBinsHelper( NULL) {
+    : mCells( PointsBegin, PointsEnd, GridSize ) {
     ReorderPoints( PointsBegin, PointsEnd);
   }
   template < typename TIteratorType >
   PointsBinsHash( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd,
 		  const std::size_t GridSize[ 3],
 		  const BoundingBox< InternalPointType > &BBox)
-    : mCells( PointsBegin, PointsEnd, GridSize, BBox ), m_PointBinsHelper( NULL) {
+    : mCells( PointsBegin, PointsEnd, GridSize, BBox ) {
     ReorderPoints( PointsBegin, PointsEnd);
   }
 
@@ -223,27 +223,27 @@ public:
     return current_result;
   }
 
-  PointsBins< Point > *GetHelper() {
-    if ( !m_PointBinsHelper && ( mNumberOfPoints > 100)) {
-      // create auxiliarry points with the centre of the used cells and with the cell_id as tag
-      m_lstPointsHelper = new std::vector< Point >;
-
-      const std::vector< std::size_t> &lstUsedCells = mCells.GetListUsedCellIndices();
-      for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
-        std::size_t idx = *it_idx;
-        InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx );
-	Point tmp( cell_centre[ 0], cell_centre[ 1], cell_centre[ 2]);
-	tmp.tag = idx;
-	m_lstPointsHelper->push_back( tmp);
-      }
-      std::size_t GridSize[ 3] = { 0, 0, 0};
-      m_PointBinsHelper = new PointsBins< Point >( m_lstPointsHelper->begin(), m_lstPointsHelper->end(),
-						   GridSize, mCells.GetBoundingBox());
-      std::cout << "=== Helper bins with: " << m_lstPointsHelper->end() - m_lstPointsHelper->begin() << " points" << std::endl;
-      m_PointBinsHelper->PrintStatistics( false);
-    }
-    return m_PointBinsHelper;
-  }
+  // PointsBins< Point > *GetHelper() {
+  //   if ( !m_PointBinsHelper && ( mNumberOfPoints > 100)) {
+  //     // create auxiliarry points with the centre of the used cells and with the cell_id as tag
+  //     m_lstPointsHelper = new std::vector< Point >;
+  // 
+  //     const std::vector< std::size_t> &lstUsedCells = mCells.GetListUsedCellIndices();
+  //     for ( auto it_idx = lstUsedCells.begin(); it_idx < lstUsedCells.end(); it_idx++ ) {
+  //       std::size_t idx = *it_idx;
+  //       InternalPointType cell_centre = mCells.CalculateCentreOfCell( idx );
+  // 	Point tmp( cell_centre[ 0], cell_centre[ 1], cell_centre[ 2]);
+  // 	tmp.tag = idx;
+  // 	m_lstPointsHelper->push_back( tmp);
+  //     }
+  //     std::size_t GridSize[ 3] = { 0, 0, 0};
+  //     m_PointBinsHelper = new PointsBins< Point >( m_lstPointsHelper->begin(), m_lstPointsHelper->end(),
+  // 						   GridSize, mCells.GetBoundingBox());
+  //     std::cout << "=== Helper bins with: " << m_lstPointsHelper->end() - m_lstPointsHelper->begin() << " points" << std::endl;
+  //     m_PointBinsHelper->PrintStatistics( false);
+  //   }
+  //   return m_PointBinsHelper;
+  // }
 
   ResultType NewSearchNearest( TObjectType const &ThePoint ) {
     ResultType current_result;
@@ -316,8 +316,8 @@ private:
   std::size_t mNumberOfPoints;
   BinsCellsContainerHash mCells;
   TObjectType **mpPoints;
-  PointsBins< Point > *m_PointBinsHelper;
-  std::vector< Point > *m_lstPointsHelper;
+  // PointsBins< Point > *m_PointBinsHelper;
+  // std::vector< Point > *m_lstPointsHelper;
 
   template < typename TIteratorType >
   void AssignPointsToCells( TIteratorType const &PointsBegin, TIteratorType const &PointsEnd ) {
