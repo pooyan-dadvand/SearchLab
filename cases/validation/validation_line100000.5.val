@@ -1,0 +1,10 @@
+Performance with ../line100000.5.pts
+ Number of Points : 100,000
+ Number of Repetitions : 1
+
+Doing 1 searches in radius and 
+doing 10 nearest searches.
+SS = Title	GEN = generation	SIR = search in radius	SN = search nearest
+OMP = OpenMP	SER = serial	NOFR = # points in SIR	NP = nearest Point
+SS		GEN	SIROMP	SIRSER	SNPOMP	SNPSER	NOFR	NP
+Nearest point = (49996) 0.5000 0.5000 0.5000 

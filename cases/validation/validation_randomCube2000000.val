@@ -1,0 +1,12 @@
+Performance with ../randomCube2000000.pts
+     points read: 1,000,000 of 2,000,000
+     points read: 2,000,000 of 2,000,000
+ Number of Points : 2,000,000
+ Number of Repetitions : 1
+
+Doing 1 searches in radius and 
+doing 10 nearest searches.
+SS = Title	GEN = generation	SIR = search in radius	SN = search nearest
+OMP = OpenMP	SER = serial	NOFR = # points in SIR	NP = nearest Point
+SS		GEN	SIROMP	SIRSER	SNPOMP	SNPSER	NOFR	NP
+Nearest point = (1208145) 0.5048 0.5032 0.4980 

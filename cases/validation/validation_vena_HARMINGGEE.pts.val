@@ -1,0 +1,10 @@
+Performance with ../big/vena_HARMINGGEE.pts.gz
+ Number of Points : 80,271
+ Number of Repetitions : 1
+
+Doing 1 searches in radius and 
+doing 10 nearest searches.
+SS = Title	GEN = generation	SIR = search in radius	SN = search nearest
+OMP = OpenMP	SER = serial	NOFR = # points in SIR	NP = nearest Point
+SS		GEN	SIROMP	SIRSER	SNPOMP	SNPSER	NOFR	NP
+Nearest point = (39486) 184.8087 177.7784 294.5633 

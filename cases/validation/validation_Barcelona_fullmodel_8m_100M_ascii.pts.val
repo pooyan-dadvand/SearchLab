@@ -1,0 +1,27 @@
+Performance with ../big/Barcelona_fullmodel_8m_100M_ascii.pts.gz
+     points read: 1,000,000 of 17,164,615
+     points read: 2,000,000 of 17,164,615
+     points read: 3,000,000 of 17,164,615
+     points read: 4,000,000 of 17,164,615
+     points read: 5,000,000 of 17,164,615
+     points read: 6,000,000 of 17,164,615
+     points read: 7,000,000 of 17,164,615
+     points read: 8,000,000 of 17,164,615
+     points read: 9,000,000 of 17,164,615
+     points read: 10,000,000 of 17,164,615
+     points read: 11,000,000 of 17,164,615
+     points read: 12,000,000 of 17,164,615
+     points read: 13,000,000 of 17,164,615
+     points read: 14,000,000 of 17,164,615
+     points read: 15,000,000 of 17,164,615
+     points read: 16,000,000 of 17,164,615
+     points read: 17,000,000 of 17,164,615
+ Number of Points : 17,164,615
+ Number of Repetitions : 1
+
+Doing 1 searches in radius and 
+doing 10 nearest searches.
+SS = Title	GEN = generation	SIR = search in radius	SN = search nearest
+OMP = OpenMP	SER = serial	NOFR = # points in SIR	NP = nearest Point
+SS		GEN	SIROMP	SIRSER	SNPOMP	SNPSER	NOFR	NP
+Nearest point = (2360253) 18171.8008 13320.7998 483.9840 
