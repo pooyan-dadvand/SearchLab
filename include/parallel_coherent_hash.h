@@ -111,7 +111,7 @@ public:
     return ret;
   }
 
-  void PrintStatistics(  bool print_statistics) const;
+  void PrintStatistics() const;
 
   // for statistic and direct access purposes:
   std::size_t getRawHashTableSize() const { return m_HashTable.size();}
@@ -290,36 +290,31 @@ inline TDataType &ParallelCoherentHash< TDataType, t_KeyType>::getDataRef( const
 }
 
 template < typename TDataType, typename t_KeyType>
-inline void ParallelCoherentHash< TDataType, t_KeyType>::PrintStatistics( bool print_statistics) const {
+inline void ParallelCoherentHash< TDataType, t_KeyType>::PrintStatistics() const {
   std::locale prev_loc = std::cout.getloc();
   std::cout.imbue( std::locale( "")); // for thousand separators ...
-  if ( print_statistics) {
-    std::cout << "=== ParallelCoherentHash statistics === \n";
-    std::cout << "sizeof t_KeyType = " << sizeof( t_KeyType) << std::endl;
-    std::cout << "sizeof TDataType = " << sizeof( TDataType) << std::endl;
-    std::cout << "sizeof HashEntry = " << sizeof( HashEntry) << std::endl;
-  }
+  // std::cout << "sizeof t_KeyType = " << sizeof( t_KeyType) << std::endl;
+  // std::cout << "sizeof TDataType = " << sizeof( TDataType) << std::endl;
+  // std::cout << "sizeof HashEntry = " << sizeof( HashEntry) << std::endl;
   std::size_t sizeHashTable = m_Size * sizeof( HashEntry);
   std::size_t sizeOffsetTable = m_HashOffsets.size() * sizeof( t_KeyType);
   std::cout << "Total number of elements in hash table = " << m_Size << " = " << sizeHashTable << " bytes" << std::endl;
   std::size_t count = 0;
-  std::cout << "Hash entry XXXX = (  key, data, age)" << std::endl;
+  // std::cout << "Hash entry XXXX = (  key, data, age)" << std::endl;
   std::size_t sum_age = 0;
+  std::size_t min_age = m_TableMaximumAge;
   for ( const auto &entry : m_HashTable ) {
     sum_age += entry.getAge();
     count += ( entry.getAge() != 0);
     // if ( entry.getAge()) {
     //   std::cout << "Hash entry " << count << " = ( " << entry.getKey() << ", " << entry.getData() << ", " << ( int)( entry.getAge()) << ")" << std::endl;
     // }
+    if ( entry.getAge() < min_age) min_age = entry.getAge();
   }
   std::cout << " Used number of elements in hash table = " << count << std::endl;
   std::cout << "Configured load factor = " << LOAD_FACTOR << " vs real load factor = " << ( double)count / ( double)m_Size << std::endl;
-  std::cout << "Maximum age = " << ( int)m_TableMaximumAge << std::endl;
-  std::cout << "Average age = " << ( double)sum_age / ( double)count << std::endl;
+  std::cout << "Age ( Min, Avg, Max) = ( " << min_age << ", " << ( double)sum_age / ( double)count << ", " << ( int)m_TableMaximumAge << ")" << std::endl;
   std::size_t total_size = sizeof( *this) + sizeHashTable + sizeOffsetTable;
   std::cout << "Total size in bytes = " << total_size << " = " << ( double)total_size / ( 1024.0 * 1024.0) << " MB" << std::endl;
   std::cout.imbue( prev_loc); // restore previous locale, i.e. without thousand separators
-  if ( print_statistics) {
-    std::cout << "=== End of statistics === \n";
-  }
 }

@@ -42,7 +42,8 @@ inline void SetCurrentNumberOfCells( std::size_t num) { G_CurrentNumberOfCells =
 #include "bins_statistics.h"
 
 bool G_UsePointsBinsHash = false;
-bool G_PrintBinsStatistics = false;
+bool G_PrintStructureStatistics = false;
+bool G_PrintGnuplotStatistics = false;
 #ifdef NDEBUG
 // i.e. compiling without assert, i.e. release mode
 std::size_t G_NumberOfRepetitions = 1000000;
@@ -83,7 +84,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
     return 1;
   }
 
-  std::cout << "Comparison for " << Filename << std::endl;
+  std::cout << "Performance with " << Filename << std::endl;
 
   std::size_t npoints;
 
@@ -145,7 +146,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
   double t1 = GetCurrentTime();
 
-  if ( G_PrintBinsStatistics) {
+  if ( G_PrintGnuplotStatistics) {
     std::cout << "Reading file = " << t1 - t0 << " sec." << std::endl;
   }
 
@@ -185,7 +186,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
 
   prev_loc = std::cout.getloc();
   std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
-  if ( G_PrintBinsStatistics) {
+  if ( G_PrintGnuplotStatistics) {
     std::cout << " min point : " << min_point << std::endl;
     std::cout << " max point : " << max_point << std::endl;
     std::cout << " search_point : " << search_point << std::endl;
@@ -220,7 +221,7 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   bool do_guess_occupancy = true;
   char filename_pnts[ 10240];
   *filename_pnts = '\0';
-  if ( G_PrintBinsStatistics && do_guess_occupancy ) {
+  if ( G_PrintGnuplotStatistics && do_guess_occupancy ) {
     Crono clk;
     size_t gridFull[ 3 ] = { 0, 0, 0 };
     GetSuggestedGridSize( gridFull, points_vector);
@@ -309,15 +310,17 @@ int RunPointSearchComparison( std::string Filename, double Radius ) {
   // Point Interfaces
   // - New Interface
   if ( !G_UsePointsBinsHash) {
-    std::cout << "Using PointsBins" << std::endl;
-    PointsNew::RunTests< PointsBins< Point > >( "PointBins", points_vector, search_point, Radius,
+    std::cout << "Creating PointsBins" << std::endl;
+    PointsNew::RunTests< PointsBins< Point > >( "BinsTimes", points_vector, search_point, Radius,
 						numrepetitions, numrepetitions_nearest,
-						G_GridSize, G_PrintBinsStatistics, filename_pnts);
+						G_GridSize, G_PrintStructureStatistics,
+						G_PrintGnuplotStatistics, filename_pnts);
   } else {
-    std::cout << "Using PointsHash" << std::endl;
-    PointsNew::RunTests< PointsBinsHash< Point > >( "PointBinsHash", points_vector, search_point, Radius,
+    std::cout << "Creating PointsHash" << std::endl;
+    PointsNew::RunTests< PointsBinsHash< Point > >( "HashTimes", points_vector, search_point, Radius,
 						    numrepetitions, numrepetitions_nearest,
-						    G_GridSize, G_PrintBinsStatistics, filename_pnts );
+						    G_GridSize, G_PrintStructureStatistics,
+						    G_PrintGnuplotStatistics, filename_pnts );
   }
 
 // - Old Interface
@@ -367,11 +370,11 @@ void testParallelCoherentHash() {
     pch.getDataRef( key)++;
     // printf( "id[ %4d] = %d\n", key, pch.getData( key));
   }
-  pch.PrintStatistics( true);
+  pch.PrintStatistics();
 }
 
 void PrintUsage( const std::string &progname, const std::string &filename, double radius) {
-  std::cout << "Usage: " << progname << " [ -type bin/hash] [ -num num_repetitions] [ -grid XxYxZ] [ -statistics] [ filename [ radius ] ]" << std::endl;
+  std::cout << "Usage: " << progname << " [ -type bin/hash] [ -num num_repetitions] [ -grid XxYxZ] [ -structure_statistics] [ -gnuplot_statistics] [ filename [ radius ] ]" << std::endl;
   std::cout << "       filename default value = " << filename << std::endl;
   std::cout << "       radius default value   = " << radius << std::endl;
   std::cout << "       type default value = " << ( G_UsePointsBinsHash ? "hash" : "bin") << std::endl;
@@ -438,7 +441,7 @@ int main( int argc, char *argv[] ) {
 	    PrintUsage( argv[ 0], filename_default, radius_default);
 	    return 0;
 	  }
-	} else if ( !strncasecmp( argv[ idx_arg ], "-g", 2 ) || !strncasecmp( argv[ idx_arg ], "--g", 3 ) ) {
+	} else if ( !strncasecmp( argv[ idx_arg ], "-grid", 5 ) || !strncasecmp( argv[ idx_arg ], "--grid", 6 ) ) {
 	  if ( idx_arg + 1 < argc) {
 	    idx_arg++;
 	    size_t grid_size_x = 0;
@@ -459,7 +462,9 @@ int main( int argc, char *argv[] ) {
 	    return 0;
 	  }
 	} else if ( !strncasecmp( argv[ idx_arg ], "-s", 2 ) || !strncasecmp( argv[ idx_arg ], "--s", 3 ) ) {
-	  G_PrintBinsStatistics  = true;
+	  G_PrintStructureStatistics  = true;
+	} else if ( !strncasecmp( argv[ idx_arg ], "-gnuplot", 8 ) || !strncasecmp( argv[ idx_arg ], "--gnuplot", 9 ) ) {
+	  G_PrintGnuplotStatistics  = true;
 	}
       } else {
 	if ( !has_filename) {

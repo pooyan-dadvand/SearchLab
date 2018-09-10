@@ -94,8 +94,8 @@ public:
   }
 
   void PrintGridSize() const;
-  void PrintStatistics( bool print_statistics) const;
-  void PrintStatisticsStdVector() const;
+  void PrintStatistics( ) const;
+  void PrintMemorySizeAndOccupancy() const;
   void PrintDensitiesInFile( const char *filename) const;
   
 private:
@@ -189,61 +189,65 @@ protected:
   }
 };
 
-inline void BinsCellsContainer::PrintStatisticsStdVector() const {
-    std::size_t numUsedCells = 0;
-    std::size_t totNumPoints = 0;
-    std::size_t minNumPoints = this->GetTotalNumberOfCells();
-    std::size_t maxNumPoints = 0;
-    std::size_t numCellsWithSinglePoint = 0;
-    std::size_t numCellsWithLessThan10 = 0;
-    std::size_t numCellsWithLessThan100 = 0;
-    for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
-      std::size_t lastOffset = this->GetCellBeginIndex( idx );
-      std::size_t numberOfPoints = lastOffset - this->GetCellBeginIndex( idx - 1 );
-      if ( numberOfPoints != 0 ) {
-        numUsedCells++;
-        totNumPoints += numberOfPoints;
-        minNumPoints = ( numberOfPoints < minNumPoints ) ? numberOfPoints : minNumPoints;
-        maxNumPoints = ( numberOfPoints > maxNumPoints ) ? numberOfPoints : maxNumPoints;
-        if ( numberOfPoints == 1 )
-          numCellsWithSinglePoint++;
-        if ( numberOfPoints <= 10 )
-          numCellsWithLessThan10++;
-        if ( numberOfPoints <= 100 )
-          numCellsWithLessThan100++;
-      }
+inline void BinsCellsContainer::PrintMemorySizeAndOccupancy() const {
+  std::locale prev_loc = std::cout.getloc();
+  std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
+
+  std::size_t numUsedCells = 0;
+  std::size_t totNumPoints = 0;
+  std::size_t minNumPoints = this->GetTotalNumberOfCells();
+  std::size_t maxNumPoints = 0;
+  std::size_t numCellsWithSinglePoint = 0;
+  std::size_t numCellsWithLessThan10 = 0;
+  std::size_t numCellsWithLessThan100 = 0;
+  for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
+    std::size_t lastOffset = this->GetCellBeginIndex( idx );
+    std::size_t numberOfPoints = lastOffset - this->GetCellBeginIndex( idx - 1 );
+    if ( numberOfPoints != 0 ) {
+      numUsedCells++;
+      totNumPoints += numberOfPoints;
+      minNumPoints = ( numberOfPoints < minNumPoints ) ? numberOfPoints : minNumPoints;
+      maxNumPoints = ( numberOfPoints > maxNumPoints ) ? numberOfPoints : maxNumPoints;
+      if ( numberOfPoints == 1 )
+	numCellsWithSinglePoint++;
+      if ( numberOfPoints <= 10 )
+	numCellsWithLessThan10++;
+      if ( numberOfPoints <= 100 )
+	numCellsWithLessThan100++;
     }
-    // the last this->GetTotalNumberOfCells() is already the total number of points...
+  }
+  // the last this->GetTotalNumberOfCells() is already the total number of points...
     
-    double occupancy_percent =
-        ( 100.0 * ( ( double )numUsedCells / ( double )this->GetTotalNumberOfCells() ) );
-    std::cout << " with " << numUsedCells << " used cells = " << occupancy_percent << " % occupancy"
-              << std::endl;
-    double bins_cells_array_size_MB =
-        ( double )( this->GetTotalNumberOfCells() * sizeof( std::size_t ) ) / ( 1024.0 * 1024.0 );
-    std::cout << " Bins size cell array = " << bins_cells_array_size_MB
-              << " MB, used = " << bins_cells_array_size_MB * occupancy_percent / 100.0 << " MB"
-              << std::endl;
-    std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
-              << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
-              << std::endl;
+  double occupancy_percent =
+    ( 100.0 * ( ( double )numUsedCells / ( double )this->GetTotalNumberOfCells() ) );
+  std::cout << " with " << numUsedCells << " used cells = " << occupancy_percent << " % occupancy"
+	    << std::endl;
+  double bins_cells_array_size_MB =
+    ( double )( this->GetTotalNumberOfCells() * sizeof( std::size_t ) ) / ( 1024.0 * 1024.0 );
+  std::cout << " Bins size cell array = " << bins_cells_array_size_MB
+	    << " MB, used = " << bins_cells_array_size_MB * occupancy_percent / 100.0 << " MB"
+	    << std::endl;
+  std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
+	    << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
+	    << std::endl;
     
-    bool detailed_statistics = true;
-    if ( detailed_statistics ) {
-      // std::cout << "Number of cells with only ( 1, <= 10, <= 100) points = ( "
-      //           << numCellsWithSinglePoint << ", " 
-      //           << numCellsWithLessThan10 << ", " 
-      //           << numCellsWithLessThan100 << ") " << std::endl;
-      // IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
-      // for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
-      //   std::size_t lastOffset = this->GetCellBeginIndex( idx );
-      //   std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
-      //   if ( numberOfPoints2 != 0 ) {
-      //     ic.countSample( ( double )numberOfPoints2 );
-      //   }
-      // }
-      // ic.print();
-    }
+  bool detailed_statistics = true;
+  if ( detailed_statistics ) {
+    // std::cout << "Number of cells with only ( 1, <= 10, <= 100) points = ( "
+    //           << numCellsWithSinglePoint << ", " 
+    //           << numCellsWithLessThan10 << ", " 
+    //           << numCellsWithLessThan100 << ") " << std::endl;
+    // IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
+    // for ( std::size_t idx = 1; idx < this->GetTotalNumberOfCells(); idx++ ) {
+    //   std::size_t lastOffset = this->GetCellBeginIndex( idx );
+    //   std::size_t numberOfPoints2 = lastOffset - this->GetCellBeginIndex( idx - 1 );
+    //   if ( numberOfPoints2 != 0 ) {
+    //     ic.countSample( ( double )numberOfPoints2 );
+    //   }
+    // }
+    // ic.print();
+  }
+  std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
 }
 
 inline void BinsCellsContainer::PrintGridSize() const {
@@ -261,22 +265,9 @@ inline void BinsCellsContainer::PrintGridSize() const {
   std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
 }
 
-inline void BinsCellsContainer::PrintStatistics( bool print_statistics) const {
-  // if !print_statistics --> print only bins size
-  // Bins statistics
+inline void BinsCellsContainer::PrintStatistics() const {
   this->PrintGridSize();
-  if ( print_statistics) {
-    std::cout << "=== Bins statistics === \n";
-    std::locale prev_loc = std::cout.getloc();
-    std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
-    // std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
-    
-    // std::cout << "Using std::vector" << std::endl;
-    this->PrintStatisticsStdVector();
-    
-    std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
-    std::cout << "=== End of statistics === \n";
-  }
+  this->PrintMemorySizeAndOccupancy();
 }
 
 void BinsCellsContainer::PrintDensitiesInFile( const char *filename) const {

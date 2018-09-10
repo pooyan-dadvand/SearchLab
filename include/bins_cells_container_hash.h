@@ -145,8 +145,8 @@ public:
     return result;
   }
 
-  void PrintStatistics( bool print_statistics) const;
-  void PrintStatisticsHash( bool print_statistics) const;
+  void PrintStatistics( ) const;
+  void PrintStatisticsHash() const;
   void PrintDensitiesInFile( const char *filename) const;
   
 private:
@@ -287,93 +287,81 @@ inline void BinsCellsContainerHash::InitializeCellsBeginIndices( TIteratorType c
   }
 }
 
-inline void BinsCellsContainerHash::PrintStatisticsHash( bool print_statistics) const {
-  // if !print_statistics --> print only bins size
-    m_PCHCellsBeginIndices.PrintStatistics( print_statistics);
-    if ( !print_statistics)
-      return;
-    std::size_t numUsedCells = 0;
-    std::size_t totNumPoints = 0;
-    std::size_t minNumPoints = this->GetTotalNumberOfCells(); // a big number like any other...
-    std::size_t maxNumPoints = 0;
-    std::size_t numCellsWithSinglePoint = 0;
-    std::size_t numCellsWithLessThan10 = 0;
-    std::size_t numCellsWithLessThan100 = 0;
+inline void BinsCellsContainerHash::PrintStatisticsHash() const {
+  m_PCHCellsBeginIndices.PrintStatistics();
+  std::size_t numUsedCells = 0;
+  std::size_t totNumPoints = 0;
+  std::size_t minNumPoints = this->GetTotalNumberOfCells(); // a big number like any other...
+  std::size_t maxNumPoints = 0;
+  std::size_t numCellsWithSinglePoint = 0;
+  std::size_t numCellsWithLessThan10 = 0;
+  std::size_t numCellsWithLessThan100 = 0;
+  for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
+    if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
+      std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
+      std::size_t numberOfPoints = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_end - lastOffset;
+      if ( numberOfPoints != 0 ) {
+	numUsedCells++;
+	totNumPoints += numberOfPoints;
+	minNumPoints = ( numberOfPoints < minNumPoints ) ? numberOfPoints : minNumPoints;
+	maxNumPoints = ( numberOfPoints > maxNumPoints ) ? numberOfPoints : maxNumPoints;
+	if ( numberOfPoints == 1 )
+	  numCellsWithSinglePoint++;
+	if ( numberOfPoints <= 10 )
+	  numCellsWithLessThan10++;
+	if ( numberOfPoints <= 100 )
+	  numCellsWithLessThan100++;
+      }
+    }
+  }
+  
+  double occupancy_percent =
+    ( 100.0 * ( ( double )numUsedCells / ( double )m_PCHCellsBeginIndices.getRawHashTableSize() ) );
+  std::cout << " with " << numUsedCells << " used cells = " << occupancy_percent << " % occupancy"
+	    << std::endl;
+  std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
+	    << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
+	    << std::endl;
+  
+  bool detailed_statistics = false; // true;
+  if ( detailed_statistics) {
+    std::cout << "Number of cells with only ( 1, <= 10, <= 100) points = ( "
+	      << numCellsWithSinglePoint << ", " 
+	      << numCellsWithLessThan10 << ", " 
+	      << numCellsWithLessThan100 << ") " << std::endl;
+    
+    IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
     for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
       if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
 	std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
 	std::size_t numberOfPoints = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_end - lastOffset;
 	if ( numberOfPoints != 0 ) {
-	  numUsedCells++;
-	  totNumPoints += numberOfPoints;
-	  minNumPoints = ( numberOfPoints < minNumPoints ) ? numberOfPoints : minNumPoints;
-	  maxNumPoints = ( numberOfPoints > maxNumPoints ) ? numberOfPoints : maxNumPoints;
-	  if ( numberOfPoints == 1 )
-	    numCellsWithSinglePoint++;
-          if ( numberOfPoints <= 10 )
-            numCellsWithLessThan10++;
-          if ( numberOfPoints <= 100 )
-            numCellsWithLessThan100++;
+	  ic.countSample( ( double )numberOfPoints );
 	}
-      }
-    }
-    
-    double occupancy_percent =
-        ( 100.0 * ( ( double )numUsedCells / ( double )m_PCHCellsBeginIndices.getRawHashTableSize() ) );
-    std::cout << " with " << numUsedCells << " used cells = " << occupancy_percent << " % occupancy"
-              << std::endl;
-    std::cout << " Number of points per cell ( Min, Avg, Max) = ( " << minNumPoints << ", "
-              << ( double )totNumPoints / ( double )( numUsedCells ) << ", " << maxNumPoints << ")"
-              << std::endl;
-
-    bool detailed_statistics = false; // true;
-    if ( detailed_statistics) {
-      std::cout << "Number of cells with only ( 1, <= 10, <= 100) points = ( "
-                << numCellsWithSinglePoint << ", " 
-                << numCellsWithLessThan10 << ", " 
-                << numCellsWithLessThan100 << ") " << std::endl;
-      
-      IntervalCount ic( 8, ( double )minNumPoints, ( double )maxNumPoints );
-      for ( std::size_t idx = 0; idx < m_PCHCellsBeginIndices.getRawHashTableSize(); idx++ ) {
-        if ( m_PCHCellsBeginIndices.getRawEntryUsed( idx)) {
-          std::size_t lastOffset = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_ini;
-          std::size_t numberOfPoints = m_PCHCellsBeginIndices.getRawEntryData( idx ).offset_end - lastOffset;
-          if ( numberOfPoints != 0 ) {
-            ic.countSample( ( double )numberOfPoints );
-          }
         }
-      }
-      ic.print();
     }
+    ic.print();
+  }
 }
 
-inline void BinsCellsContainerHash::PrintStatistics( bool print_statistics) const {
-  // if !print_statistics --> print only bins size
-    // Bins statistics
-    std::locale prev_loc = std::cout.getloc();
-    std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
-    std::cout << "Bin of ";
-    std::size_t numberOfCells = 1;
-    for ( std::size_t i = 0; i < Dimension; i++ ) {
-      numberOfCells *= this->GetNumberOfCells( i );
-      std::cout << this->GetNumberOfCells( i );
-      if ( i < Dimension - 1 )
-        std::cout << " x ";
-    }
-    std::cout << " = " << numberOfCells << " cells" << std::endl;
-    std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
-
-    if ( print_statistics) {
-      std::cout << "=== Bins statistics === \n";
-      std::cout << "Using ParallelCoherentHash" << std::endl;
-    }
-      this->PrintStatisticsHash( print_statistics);
-    if ( print_statistics) {
-      std::cout << "=== End of statistics === \n";
-    }
-
-    std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
+inline void BinsCellsContainerHash::PrintStatistics() const {
+  std::locale prev_loc = std::cout.getloc();
+  std::cout.imbue( std::locale( "" ) ); // for thousand separators ...
+  std::cout << "Bin of ";
+  std::size_t numberOfCells = 1;
+  for ( std::size_t i = 0; i < Dimension; i++ ) {
+    numberOfCells *= this->GetNumberOfCells( i );
+    std::cout << this->GetNumberOfCells( i );
+    if ( i < Dimension - 1 )
+      std::cout << " x ";
   }
+  std::cout << " = " << numberOfCells << " cells" << std::endl;
+  std::cout << " = " << this->GetTotalNumberOfCells() << " cells" << std::endl;
+  
+  this->PrintStatisticsHash();
+
+  std::cout.imbue( prev_loc ); // restore previous locale, i.e. without thousand separators
+}
 
 void BinsCellsContainerHash::PrintDensitiesInFile( const char *filename) const {
   double lstPivots[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,

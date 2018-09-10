@@ -137,9 +137,8 @@ public:
     return current_result;
   }
 
-  void PrintStatistics( bool print_statistics) const {
-    // Bins statistics
-    mCells.PrintStatistics( print_statistics);
+  void PrintStatistics() const {
+    mCells.PrintStatistics();
   }
 
   void PrintDensitiesInFile( const char *filename) const {
